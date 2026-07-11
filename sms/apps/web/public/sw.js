@@ -31,9 +31,9 @@ self.addEventListener("activate", (event) => {
 });
 
 // Network-first, falling back to cache (then the app shell) when offline.
-// Only GET requests are intercepted — all writes (attendance marks) go
-// through the Dexie outbox and the bulk sync endpoint, never through this
-// service worker's fetch handler.
+// Only GET requests are intercepted — all writes (attendance marks, CA
+// scores, ...) go through the Dexie outbox and their bulk sync endpoints,
+// never through this service worker's fetch handler.
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -60,7 +60,7 @@ self.addEventListener("fetch", (event) => {
 // Sync support) the online-event + 30s interval in sync-engine.ts is the
 // fallback and doesn't depend on this handler at all.
 self.addEventListener("sync", (event) => {
-  if (event.tag === "attendance-sync") {
+  if (event.tag === "outbox-sync") {
     event.waitUntil(
       self.clients.matchAll().then((clients) => {
         clients.forEach((client) => client.postMessage({ type: "SMS_SYNC_NOW" }));

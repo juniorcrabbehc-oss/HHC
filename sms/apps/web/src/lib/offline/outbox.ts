@@ -1,5 +1,5 @@
 import { getDb } from "./dexie";
-import type { OutboxItem, OutboxStatus } from "./dexie";
+import type { OutboxEntityType, OutboxItem, OutboxStatus } from "./dexie";
 
 export interface AttendanceMarkPayload {
   clientUuid?: string;
@@ -10,6 +10,17 @@ export interface AttendanceMarkPayload {
   status: string;
   notes?: string;
   source?: string;
+}
+
+export interface CaScoreMarkPayload {
+  clientUuid?: string;
+  learnerId: string;
+  classSubjectId: string;
+  termId: string;
+  assessmentType: string;
+  maxScore: number;
+  scoreObtained: number;
+  weightPct: number;
 }
 
 function generateClientUuid(): string {
@@ -62,8 +73,56 @@ export async function enqueueAttendanceMark(payload: AttendanceMarkPayload): Pro
   return clientUuid;
 }
 
+/**
+ * Same "overwrite the queued entry in place" behavior as
+ * `enqueueAttendanceMark`, keyed on the CA score "cell" identity —
+ * learner + subject + term + assessment type — since a learner can have
+ * several CA entries per subject/term (one per assessmentType), unlike
+ * attendance's one-per-day cell.
+ */
+export async function enqueueCaScoreMark(payload: CaScoreMarkPayload): Promise<string> {
+  const db = getDb();
+
+  const existing = await db.outbox
+    .where("entityType")
+    .equals("ca_score")
+    .filter((item) => {
+      const p = item.payload as unknown as CaScoreMarkPayload;
+      return (
+        item.status !== "synced" &&
+        p.learnerId === payload.learnerId &&
+        p.classSubjectId === payload.classSubjectId &&
+        p.termId === payload.termId &&
+        p.assessmentType === payload.assessmentType
+      );
+    })
+    .first();
+
+  const clientUuid = existing?.clientUuid ?? payload.clientUuid ?? generateClientUuid();
+
+  const item: OutboxItem = {
+    clientUuid,
+    entityType: "ca_score",
+    payload: { ...payload, clientUuid },
+    status: "pending",
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
+  };
+
+  await db.outbox.put(item);
+  return clientUuid;
+}
+
 export function listPending(): Promise<OutboxItem[]> {
   return getDb().outbox.where("status").anyOf(["pending", "failed"]).toArray();
+}
+
+/** Splits an already-loaded pending batch by entity type (in-memory — no extra Dexie query). */
+export function partitionByType(items: OutboxItem[]): Record<OutboxEntityType, OutboxItem[]> {
+  const result: Record<OutboxEntityType, OutboxItem[]> = { attendance: [], ca_score: [] };
+  for (const item of items) {
+    result[item.entityType].push(item);
+  }
+  return result;
 }
 
 export function countPending(): Promise<number> {
@@ -79,6 +138,18 @@ export async function getPendingForClassDate(classId: string, date: string): Pro
   return items.filter((item) => {
     const p = item.payload as unknown as AttendanceMarkPayload;
     return p.classId === classId && p.date === date;
+  });
+}
+
+export async function getPendingForClassSubjectTerm(classSubjectId: string, termId: string): Promise<OutboxItem[]> {
+  const items = await getDb()
+    .outbox.where("entityType")
+    .equals("ca_score")
+    .toArray();
+
+  return items.filter((item) => {
+    const p = item.payload as unknown as CaScoreMarkPayload;
+    return p.classSubjectId === classSubjectId && p.termId === termId;
   });
 }
 

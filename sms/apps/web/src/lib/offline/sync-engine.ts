@@ -1,8 +1,53 @@
-import { ApiError, markAttendanceBulk } from "../api-client";
-import type { AttendanceSyncResultItem } from "../api-client";
-import { listPending, markStatus, removeItem } from "./outbox";
+import { ApiError, markAttendanceBulk, markCaScoreBulk } from "../api-client";
+import type { AttendanceSyncResultItem, ScoreSyncResultItem } from "../api-client";
+import { listPending, markStatus, partitionByType, removeItem } from "./outbox";
+import type { OutboxItem } from "./dexie";
 
-export type { AttendanceSyncResultItem };
+export type { AttendanceSyncResultItem, ScoreSyncResultItem };
+
+type SyncResultItem = AttendanceSyncResultItem | ScoreSyncResultItem;
+
+/**
+ * Drains one entity-type partition of the outbox by POSTing it to its bulk
+ * endpoint. Shared by every outbox entity type (attendance, CA scores, ...)
+ * — adding a new offline-tolerant entity means adding one more call to this
+ * from `syncNow`, not a parallel copy of the drain logic.
+ */
+async function syncPartition(items: OutboxItem[], bulkSync: (payloads: unknown[]) => Promise<SyncResultItem[]>): Promise<void> {
+  if (items.length === 0) return;
+
+  await Promise.all(items.map((item) => markStatus(item.clientUuid, "syncing")));
+
+  let results: SyncResultItem[];
+  try {
+    results = await bulkSync(items.map((item) => item.payload));
+  } catch (error) {
+    // Network/server failure (offline, 5xx, auth expired, etc.) — leave
+    // everything pending so the next trigger (interval/online/manual)
+    // retries the whole batch. Do not mark individual items failed here;
+    // "failed" is reserved for server-confirmed per-item validation
+    // failures, not "we couldn't even reach the server."
+    const isAuthError = error instanceof ApiError && error.status === 401;
+    await Promise.all(items.map((item) => markStatus(item.clientUuid, "pending")));
+    if (isAuthError) {
+      // Nothing else to do here in Phase 2/3 — no refresh-token flow wired
+      // into the sync engine yet. Left pending for a manual re-login + retry.
+    }
+    return;
+  }
+
+  await Promise.all(
+    results.map(async (result) => {
+      if (result.status === "failed") {
+        await markStatus(result.clientUuid, "failed", result.errorMessage);
+      } else {
+        // created | updated | unchanged all mean "the server has it" —
+        // remove from the outbox rather than keeping a "synced" tombstone.
+        await removeItem(result.clientUuid);
+      }
+    }),
+  );
+}
 
 let isSyncing = false;
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
@@ -26,10 +71,11 @@ export function isSyncInProgress(): boolean {
 }
 
 /**
- * Drains the outbox by POSTing every pending item to
- * `/attendance/records/bulk` in a single batch. Idempotent-safe to call
- * repeatedly (e.g. from an interval) — it's a no-op if there's nothing
- * pending or a sync is already in flight.
+ * Drains the outbox by POSTing every pending item to its entity type's
+ * bulk endpoint (`/attendance/records/bulk`, `/ca-scores/bulk`, ...), one
+ * partition per type, run concurrently. Idempotent-safe to call repeatedly
+ * (e.g. from an interval) — it's a no-op if there's nothing pending or a
+ * sync is already in flight.
  */
 export async function syncNow(): Promise<void> {
   if (isSyncing) return;
@@ -42,37 +88,11 @@ export async function syncNow(): Promise<void> {
   notify();
 
   try {
-    await Promise.all(pending.map((item) => markStatus(item.clientUuid, "syncing")));
-
-    let results: AttendanceSyncResultItem[];
-    try {
-      results = await markAttendanceBulk(pending.map((item) => item.payload));
-    } catch (error) {
-      // Network/server failure (offline, 5xx, auth expired, etc.) — leave
-      // everything pending so the next trigger (interval/online/manual)
-      // retries the whole batch. Do not mark individual items failed here;
-      // "failed" is reserved for server-confirmed per-item validation
-      // failures, not "we couldn't even reach the server."
-      const isAuthError = error instanceof ApiError && error.status === 401;
-      await Promise.all(pending.map((item) => markStatus(item.clientUuid, "pending")));
-      if (isAuthError) {
-        // Nothing else to do here in Phase 2 — no refresh-token flow wired
-        // into the sync engine yet. Left pending for a manual re-login + retry.
-      }
-      return;
-    }
-
-    await Promise.all(
-      results.map(async (result) => {
-        if (result.status === "failed") {
-          await markStatus(result.clientUuid, "failed", result.errorMessage);
-        } else {
-          // created | updated | unchanged all mean "the server has it" —
-          // remove from the outbox rather than keeping a "synced" tombstone.
-          await removeItem(result.clientUuid);
-        }
-      }),
-    );
+    const byType = partitionByType(pending);
+    await Promise.all([
+      syncPartition(byType.attendance, markAttendanceBulk as (payloads: unknown[]) => Promise<SyncResultItem[]>),
+      syncPartition(byType.ca_score, markCaScoreBulk as (payloads: unknown[]) => Promise<SyncResultItem[]>),
+    ]);
   } finally {
     isSyncing = false;
     notify();
@@ -128,7 +148,7 @@ export function startSyncEngine(intervalMs = 30000): () => void {
         const syncRegistration = registration as ServiceWorkerRegistration & {
           sync?: { register(tag: string): Promise<void> };
         };
-        return syncRegistration.sync?.register("attendance-sync");
+        return syncRegistration.sync?.register("outbox-sync");
       })
       .catch(() => {
         // Ignore — interval/online-event fallback covers this browser.

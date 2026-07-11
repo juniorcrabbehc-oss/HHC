@@ -1,4 +1,4 @@
-import type { AttendanceStatus, AttendanceSource, Gender, GuardianRelationship, LearnerStatus, Role } from "@sms/shared-types";
+import type { AttendanceStatus, AttendanceSource, Gender, GuardianRelationship, LearnerStatus, LevelStage, Role } from "@sms/shared-types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 
@@ -317,4 +317,200 @@ export function listLearners(params: ListLearnersParams = {}): Promise<Paginated
 
 export function getLearner(id: string): Promise<LearnerDetail> {
   return apiFetch<LearnerDetail>(`/learners/${id}`, { auth: true });
+}
+
+// ---------------------------------------------------------------------------
+// Typed endpoint helpers (Phase 3 — academics: CA/exam scores, report cards)
+// ---------------------------------------------------------------------------
+
+export interface SubjectDto {
+  id: string;
+  schoolId: string;
+  name: string;
+  code: string;
+  isCore: boolean;
+}
+
+export interface ClassSubjectDto {
+  id: string;
+  schoolId: string;
+  classId: string;
+  subjectId: string;
+  teacherId: string | null;
+  subject?: SubjectDto;
+  class?: ClassDto;
+}
+
+export interface AssessmentConfigDto {
+  id: string;
+  schoolId: string;
+  levelStage: LevelStage;
+  caWeightPct: number;
+  examWeightPct: number;
+  academicYearId: string;
+}
+
+export interface GradingBandDto {
+  id: string;
+  schoolId: string;
+  name: string;
+  minScore: number;
+  maxScore: number;
+  grade: string;
+  descriptor: string;
+  remark?: string | null;
+  levelStage: LevelStage;
+  isActive: boolean;
+}
+
+export interface CaScoreDto {
+  id: string;
+  schoolId: string;
+  learnerId: string;
+  classSubjectId: string;
+  termId: string;
+  assessmentType: string;
+  maxScore: number;
+  scoreObtained: number;
+  weightPct: number;
+  recordedBy: string;
+  clientUuid: string;
+}
+
+export interface ExamScoreDto {
+  id: string;
+  schoolId: string;
+  learnerId: string;
+  classSubjectId: string;
+  termId: string;
+  examType: string;
+  maxScore: number;
+  scoreObtained: number;
+  recordedBy: string;
+  clientUuid: string;
+}
+
+export interface ScoreRosterRow<TScore> {
+  learnerId: string;
+  firstName: string;
+  lastName: string;
+  admissionNumber: string;
+  scores: TScore[];
+}
+
+export interface ScoreSyncResultItem {
+  clientUuid: string;
+  status: "created" | "updated" | "unchanged" | "failed";
+  id?: string;
+  errorMessage?: string;
+}
+
+export interface ReportCardItemDto {
+  id: string;
+  reportCardId: string;
+  subjectId: string;
+  subject?: SubjectDto;
+  caTotal: number;
+  examTotal: number;
+  totalScore: number;
+  grade: string;
+  remark?: string | null;
+}
+
+export interface ReportCardDto {
+  id: string;
+  schoolId: string;
+  learnerId: string;
+  termId: string;
+  classId: string;
+  overallAverage: number | null;
+  overallGrade: string | null;
+  positionInClass: number | null;
+  conductRemark?: string | null;
+  teacherRemark?: string | null;
+  headRemark?: string | null;
+  pdfUrl?: string | null;
+  status: "draft" | "published";
+  items?: ReportCardItemDto[];
+  learner?: LearnerSummary;
+  term?: TermDto;
+  class?: ClassDto;
+}
+
+export function getClassSubjects(classId: string): Promise<ClassSubjectDto[]> {
+  const searchParams = new URLSearchParams({ classId });
+  return apiFetch<ClassSubjectDto[]>(`/class-subjects?${searchParams.toString()}`, { auth: true });
+}
+
+export function getAssessmentConfig(params: { academicYearId?: string; levelStage?: LevelStage } = {}): Promise<AssessmentConfigDto[]> {
+  const searchParams = new URLSearchParams();
+  if (params.academicYearId) searchParams.set("academicYearId", params.academicYearId);
+  if (params.levelStage) searchParams.set("levelStage", params.levelStage);
+  const query = searchParams.toString();
+  return apiFetch<AssessmentConfigDto[]>(`/assessment-config${query ? `?${query}` : ""}`, { auth: true });
+}
+
+export function getGradingBands(levelStage?: LevelStage): Promise<GradingBandDto[]> {
+  const query = levelStage ? `?levelStage=${levelStage}` : "";
+  return apiFetch<GradingBandDto[]>(`/grading-bands${query}`, { auth: true });
+}
+
+export function getCaScoreRoster(classSubjectId: string, termId: string): Promise<ScoreRosterRow<CaScoreDto>[]> {
+  const searchParams = new URLSearchParams({ classSubjectId, termId });
+  return apiFetch<ScoreRosterRow<CaScoreDto>[]>(`/ca-scores?${searchParams.toString()}`, { auth: true });
+}
+
+export function markCaScore(payload: {
+  clientUuid: string;
+  learnerId: string;
+  classSubjectId: string;
+  termId: string;
+  assessmentType: string;
+  maxScore: number;
+  scoreObtained: number;
+  weightPct: number;
+}): Promise<CaScoreDto> {
+  return apiFetch<CaScoreDto>("/ca-scores", { method: "POST", auth: true, body: payload });
+}
+
+export function markCaScoreBulk(records: unknown[]): Promise<ScoreSyncResultItem[]> {
+  return apiFetch<ScoreSyncResultItem[]>("/ca-scores/bulk", { method: "POST", auth: true, body: { records } });
+}
+
+export function getExamScoreRoster(classSubjectId: string, termId: string): Promise<ScoreRosterRow<ExamScoreDto>[]> {
+  const searchParams = new URLSearchParams({ classSubjectId, termId });
+  return apiFetch<ScoreRosterRow<ExamScoreDto>[]>(`/exam-scores?${searchParams.toString()}`, { auth: true });
+}
+
+export function markExamScore(payload: {
+  clientUuid: string;
+  learnerId: string;
+  classSubjectId: string;
+  termId: string;
+  examType: string;
+  maxScore: number;
+  scoreObtained: number;
+}): Promise<ExamScoreDto> {
+  return apiFetch<ExamScoreDto>("/exam-scores", { method: "POST", auth: true, body: payload });
+}
+
+export function markExamScoreBulk(records: unknown[]): Promise<ScoreSyncResultItem[]> {
+  return apiFetch<ScoreSyncResultItem[]>("/exam-scores/bulk", { method: "POST", auth: true, body: { records } });
+}
+
+export function generateReportCards(classId: string, termId: string): Promise<ReportCardDto[]> {
+  return apiFetch<ReportCardDto[]>("/report-cards/generate", { method: "POST", auth: true, body: { classId, termId } });
+}
+
+export function publishReportCard(id: string): Promise<ReportCardDto> {
+  return apiFetch<ReportCardDto>(`/report-cards/${id}/publish`, { method: "POST", auth: true });
+}
+
+export function getReportCard(id: string): Promise<ReportCardDto> {
+  return apiFetch<ReportCardDto>(`/report-cards/${id}`, { auth: true });
+}
+
+export function listReportCards(classId: string, termId: string): Promise<ReportCardDto[]> {
+  const searchParams = new URLSearchParams({ classId, termId });
+  return apiFetch<ReportCardDto[]>(`/report-cards?${searchParams.toString()}`, { auth: true });
 }

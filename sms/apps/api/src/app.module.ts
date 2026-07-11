@@ -10,6 +10,7 @@ import { AcademicStructureModule } from "./modules/academic-structure/academic-s
 import { LearnersModule } from "./modules/learners/learners.module";
 import { GuardiansModule } from "./modules/guardians/guardians.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
+import { AcademicsModule } from "./modules/academics/academics.module";
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { AttendanceModule } from "./modules/attendance/attendance.module";
     LearnersModule,
     GuardiansModule,
     AttendanceModule,
+    AcademicsModule,
   ],
 })
 export class AppModule {}

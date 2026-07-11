@@ -17,3 +17,7 @@ export async function getCache<T>(key: string): Promise<T | null> {
 export function registerCacheKey(classId: string, date: string): string {
   return `attendance-register:${classId}:${date}`;
 }
+
+export function caScoreRosterCacheKey(classSubjectId: string, termId: string): string {
+  return `ca-score-roster:${classSubjectId}:${termId}`;
+}

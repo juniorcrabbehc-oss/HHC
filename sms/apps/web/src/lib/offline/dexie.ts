@@ -1,7 +1,7 @@
 import Dexie, { type Table } from "dexie";
 
 export type OutboxStatus = "pending" | "syncing" | "synced" | "failed";
-export type OutboxEntityType = "attendance";
+export type OutboxEntityType = "attendance" | "ca_score";
 
 export interface OutboxItem {
   clientUuid: string;

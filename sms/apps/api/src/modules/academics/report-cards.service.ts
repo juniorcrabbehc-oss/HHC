@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { PrismaService } from "../../prisma/prisma.service";
 import { TenantContextService } from "../../common/tenant/tenant-context.service";
 import { AuditService } from "../../common/audit/audit.service";
@@ -7,6 +8,7 @@ import type { AuthenticatedUser } from "../../common/types/authenticated-user";
 import type { GenerateReportCardsDto } from "./dto/report-card.dto";
 import { serializeReportCard } from "./academics.mapper";
 import { findGradingBand, round2 } from "./grading.util";
+import { REPORT_CARD_PUBLISHED_EVENT, type ReportCardPublishedEvent } from "./report-card.events";
 
 interface SubjectItemComputation {
   subjectId: string;
@@ -42,6 +44,7 @@ export class ReportCardsService {
     private readonly prisma: PrismaService,
     private readonly tenant: TenantContextService,
     private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async generate(dto: GenerateReportCardsDto, actor: AuthenticatedUser) {
@@ -258,6 +261,18 @@ export class ReportCardsService {
       entityId: id,
       diff: { learnerId: reportCard.learnerId, termId: reportCard.termId, classId: reportCard.classId },
     });
+
+    // Fire-and-forget notification hook (Phase 5) — see
+    // `report-card.events.ts` for why this is an event rather than a
+    // direct call into a notifications service.
+    const event: ReportCardPublishedEvent = {
+      schoolId,
+      reportCardId: updated.id,
+      learnerId: reportCard.learnerId,
+      termId: reportCard.termId,
+      classId: reportCard.classId,
+    };
+    this.eventEmitter.emit(REPORT_CARD_PUBLISHED_EVENT, event);
 
     return serializeReportCard(updated);
   }

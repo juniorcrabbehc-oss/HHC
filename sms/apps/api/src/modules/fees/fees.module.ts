@@ -10,9 +10,16 @@ import { PaymentsWebhookController } from "./payments-webhook.controller";
 import { PaymentsReconciliationScheduler } from "./payments-reconciliation.scheduler";
 import { ReceiptsController } from "./receipts.controller";
 import { PaystackClient } from "./paystack/paystack.client";
-import { NOTIFICATIONS_PORT, NoopNotificationsAdapter } from "./notifications/notifications.port";
+import { NOTIFICATIONS_PORT } from "./notifications/notifications.port";
+import { CommunicationsModule } from "../communications/communications.module";
+import { ArkeselNotificationsAdapter } from "../communications/notifications/arkesel-notifications.adapter";
 
 @Module({
+  // Needed so `ArkeselNotificationsAdapter` (exported by
+  // CommunicationsModule) is resolvable for the `useExisting` binding
+  // below — CommunicationsModule has no dependency back on FeesModule, so
+  // this doesn't introduce a cycle.
+  imports: [CommunicationsModule],
   controllers: [
     FeeStructuresController,
     InvoicesController,
@@ -27,10 +34,10 @@ import { NOTIFICATIONS_PORT, NoopNotificationsAdapter } from "./notifications/no
     PaymentsProcessingService,
     PaymentsReconciliationScheduler,
     PaystackClient,
-    // Phase 5 (Communications) swaps this binding for a real SMS adapter
-    // that implements the same `NotificationsPort` interface — nothing
-    // else in this module needs to change. See `notifications.port.ts`.
-    { provide: NOTIFICATIONS_PORT, useClass: NoopNotificationsAdapter },
+    // Phase 5 (Communications): bound to the real SMS adapter in place of
+    // `NoopNotificationsAdapter` — nothing else in this module changed.
+    // See `notifications.port.ts`.
+    { provide: NOTIFICATIONS_PORT, useExisting: ArkeselNotificationsAdapter },
   ],
 })
 export class FeesModule {}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApiError, listLearners } from "../../../../lib/api-client";
 import type { LearnerSummary } from "../../../../lib/api-client";
+import { MessageGuardianAction } from "../../../../features/communications/MessageGuardianAction";
 
 export default function LearnersListPage() {
   const [learners, setLearners] = useState<LearnerSummary[]>([]);
@@ -56,6 +57,7 @@ export default function LearnersListPage() {
               <th>Name</th>
               <th>Class</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -70,12 +72,15 @@ export default function LearnersListPage() {
                   </td>
                   <td>{currentClass?.name ?? "—"}</td>
                   <td>{learner.status}</td>
+                  <td>
+                    <MessageGuardianAction learnerId={learner.id} />
+                  </td>
                 </tr>
               );
             })}
             {learners.length === 0 && (
               <tr>
-                <td colSpan={4}>No learners found.</td>
+                <td colSpan={5}>No learners found.</td>
               </tr>
             )}
           </tbody>

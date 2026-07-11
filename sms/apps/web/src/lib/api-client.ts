@@ -695,3 +695,82 @@ export function getPaymentStatus(id: string): Promise<PaymentDto> {
 export function getReceipt(id: string): Promise<ReceiptDto> {
   return apiFetch<ReceiptDto>(`/receipts/${id}`, { auth: true });
 }
+
+// ---------------------------------------------------------------------------
+// Typed endpoint helpers (Phase 5 — communications: messages & templates)
+// ---------------------------------------------------------------------------
+
+export type MessageChannel = "sms" | "in_app";
+export type MessageEventTrigger = "absence_alert" | "fee_reminder" | "report_card_ready" | "payment_received" | "manual";
+export type MessageStatus = "queued" | "sent" | "delivered" | "failed";
+
+export interface MessageTemplateDto {
+  id: string;
+  schoolId: string;
+  name: string;
+  channel: MessageChannel;
+  eventTrigger: MessageEventTrigger;
+  bodyTemplate: string;
+  isActive: boolean;
+}
+
+export interface MessageDto {
+  id: string;
+  schoolId: string;
+  channel: MessageChannel;
+  templateId?: string | null;
+  recipientGuardianId?: string | null;
+  recipientPhone?: string | null;
+  body: string;
+  relatedEntityType?: string | null;
+  relatedEntityId?: string | null;
+  status: MessageStatus;
+  provider?: string | null;
+  providerMessageId?: string | null;
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+  createdAt: string;
+}
+
+export function listMessages(box: "inbox" = "inbox"): Promise<MessageDto[]> {
+  const searchParams = new URLSearchParams({ box });
+  return apiFetch<MessageDto[]>(`/messages?${searchParams.toString()}`, { auth: true });
+}
+
+export function getMessage(id: string): Promise<MessageDto> {
+  return apiFetch<MessageDto>(`/messages/${id}`, { auth: true });
+}
+
+export function sendMessage(input: {
+  guardianId?: string;
+  learnerId?: string;
+  channel: MessageChannel;
+  body: string;
+}): Promise<MessageDto> {
+  return apiFetch<MessageDto>("/messages", { method: "POST", auth: true, body: input });
+}
+
+export function listMessageTemplates(params: { eventTrigger?: MessageEventTrigger; channel?: MessageChannel } = {}): Promise<MessageTemplateDto[]> {
+  const searchParams = new URLSearchParams();
+  if (params.eventTrigger) searchParams.set("eventTrigger", params.eventTrigger);
+  if (params.channel) searchParams.set("channel", params.channel);
+  const query = searchParams.toString();
+  return apiFetch<MessageTemplateDto[]>(`/message-templates${query ? `?${query}` : ""}`, { auth: true });
+}
+
+export function createMessageTemplate(input: {
+  name: string;
+  channel: MessageChannel;
+  eventTrigger: MessageEventTrigger;
+  bodyTemplate: string;
+  isActive?: boolean;
+}): Promise<MessageTemplateDto> {
+  return apiFetch<MessageTemplateDto>("/message-templates", { method: "POST", auth: true, body: input });
+}
+
+export function updateMessageTemplate(
+  id: string,
+  input: { name?: string; bodyTemplate?: string; isActive?: boolean },
+): Promise<MessageTemplateDto> {
+  return apiFetch<MessageTemplateDto>(`/message-templates/${id}`, { method: "PATCH", auth: true, body: input });
+}

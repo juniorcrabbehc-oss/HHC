@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Prisma } from "@prisma/client";
 import type { AttendanceRecord } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -8,6 +9,7 @@ import { toDateOnly } from "../../common/utils/date";
 import type { AuthenticatedUser } from "../../common/types/authenticated-user";
 import type { MarkAttendanceDto } from "./dto/mark-attendance.dto";
 import { serializeAttendanceRecord, toPrismaSource, toPrismaStatus } from "./attendance.mapper";
+import { ATTENDANCE_MARKED_EVENT, type AttendanceMarkedEvent } from "./attendance.events";
 
 export type SyncOutcome = "created" | "updated" | "unchanged";
 
@@ -31,10 +33,12 @@ export class AttendanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenant: TenantContextService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async markOne(dto: MarkAttendanceDto, actor: AuthenticatedUser) {
-    const { record } = await this.upsertOne(dto, actor);
+    const { record, outcome } = await this.upsertOne(dto, actor);
+    this.emitMarkedEvent(record, outcome);
     return serializeAttendanceRecord(record);
   }
 
@@ -48,6 +52,7 @@ export class AttendanceService {
     for (const dto of dtos) {
       try {
         const { record, outcome } = await this.upsertOne(dto, actor);
+        this.emitMarkedEvent(record, outcome);
         results.push({ clientUuid: dto.clientUuid, status: outcome, id: record.id });
       } catch (error) {
         results.push({
@@ -59,6 +64,29 @@ export class AttendanceService {
     }
 
     return results;
+  }
+
+  /**
+   * Fire-and-forget notification hook (Phase 5) — not emitted for an
+   * exact-replay "unchanged" outcome, only for a genuinely new or changed
+   * record, so offline-sync retries of the same write don't re-notify.
+   * See `attendance.events.ts` for why this is an event rather than a
+   * direct call into a notifications service.
+   */
+  private emitMarkedEvent(record: AttendanceRecord, outcome: SyncOutcome): void {
+    if (outcome === "unchanged") return;
+
+    const event: AttendanceMarkedEvent = {
+      schoolId: record.schoolId,
+      learnerId: record.learnerId,
+      classId: record.classId,
+      termId: record.termId,
+      recordId: record.id,
+      date: record.date,
+      status: record.status,
+      recordedBy: record.recordedBy,
+    };
+    this.eventEmitter.emit(ATTENDANCE_MARKED_EVENT, event);
   }
 
   /**

@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 import configuration from "./config/configuration";
 import { PrismaModule } from "./prisma/prisma.module";
 import { HealthModule } from "./health/health.module";
@@ -13,6 +14,7 @@ import { GuardiansModule } from "./modules/guardians/guardians.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { AcademicsModule } from "./modules/academics/academics.module";
 import { FeesModule } from "./modules/fees/fees.module";
+import { CommunicationsModule } from "./modules/communications/communications.module";
 
 @Module({
   imports: [
@@ -24,6 +26,13 @@ import { FeesModule } from "./modules/fees/fees.module";
     // (`PaymentsReconciliationScheduler`) — registered once, globally,
     // here, same as `ConfigModule.forRoot`.
     ScheduleModule.forRoot(),
+    // Powers the attendance -> absence-alert and report-card ->
+    // report-card-ready event seams the communications module listens on
+    // (see `AttendanceService`/`ReportCardsService`'s `eventEmitter.emit`
+    // calls and `NotificationTriggersService`'s `@OnEvent` handlers).
+    // `forRoot()` registers `EventEmitter2` globally, same pattern as
+    // `ConfigModule.forRoot({ isGlobal: true })`.
+    EventEmitterModule.forRoot(),
     PrismaModule,
     TenantContextModule,
     AuditModule,
@@ -35,6 +44,7 @@ import { FeesModule } from "./modules/fees/fees.module";
     AttendanceModule,
     AcademicsModule,
     FeesModule,
+    CommunicationsModule,
   ],
 })
 export class AppModule {}

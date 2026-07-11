@@ -4,3 +4,4 @@ export * from "./learners";
 export * from "./attendance";
 export * from "./academics";
 export * from "./fees";
+export * from "./communications";

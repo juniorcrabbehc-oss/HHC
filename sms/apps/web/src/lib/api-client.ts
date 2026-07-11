@@ -1,4 +1,16 @@
-import type { AttendanceStatus, AttendanceSource, Gender, GuardianRelationship, LearnerStatus, LevelStage, Role } from "@sms/shared-types";
+import type {
+  AttendanceStatus,
+  AttendanceSource,
+  Gender,
+  GuardianRelationship,
+  InvoiceStatus,
+  LearnerStatus,
+  LevelStage,
+  MomoProvider,
+  PaymentMethod,
+  PaymentStatus,
+  Role,
+} from "@sms/shared-types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 
@@ -513,4 +525,173 @@ export function getReportCard(id: string): Promise<ReportCardDto> {
 export function listReportCards(classId: string, termId: string): Promise<ReportCardDto[]> {
   const searchParams = new URLSearchParams({ classId, termId });
   return apiFetch<ReportCardDto[]>(`/report-cards?${searchParams.toString()}`, { auth: true });
+}
+
+// ---------------------------------------------------------------------------
+// Typed endpoint helpers (Phase 4 — fees & MoMo payments)
+// ---------------------------------------------------------------------------
+
+export interface FeeItemDto {
+  id: string;
+  schoolId: string;
+  feeStructureId: string;
+  name: string;
+  amount: number;
+  isOptional: boolean;
+}
+
+export interface FeeStructureDto {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  termId: string;
+  levelId: string;
+  name: string;
+  feeItems?: FeeItemDto[];
+}
+
+export interface InvoiceLineItemDto {
+  id: string;
+  schoolId: string;
+  invoiceId: string;
+  feeItemId?: string | null;
+  description: string;
+  amount: number;
+}
+
+export interface InvoiceDto {
+  id: string;
+  schoolId: string;
+  learnerId: string;
+  termId: string;
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  totalAmount: number;
+  amountPaid: number;
+  balance: number;
+  status: InvoiceStatus;
+  lastReminderSentAt?: string | null;
+  lineItems?: InvoiceLineItemDto[];
+  payments?: PaymentDto[];
+  learner?: LearnerSummary;
+}
+
+export interface GenerateInvoicesResultDto {
+  created: InvoiceDto[];
+  skipped: { learnerId: string; reason: string }[];
+}
+
+export interface PaymentDto {
+  id: string;
+  schoolId: string;
+  learnerId: string;
+  invoiceId?: string | null;
+  amount: number;
+  method: PaymentMethod;
+  momoProvider?: MomoProvider | null;
+  status: PaymentStatus;
+  providerReference?: string | null;
+  providerTransactionId?: string | null;
+  clientUuid: string;
+  paidAt?: string | null;
+  receiptId?: string | null;
+}
+
+export interface InitiateMomoResponseDto {
+  payment: PaymentDto;
+  providerStatus: string;
+  displayText: string | null;
+}
+
+export interface PaymentAllocationDto {
+  id: string;
+  schoolId: string;
+  paymentId: string;
+  invoiceId: string;
+  amountAllocated: number;
+}
+
+export interface ReceiptDto {
+  id: string;
+  schoolId: string;
+  paymentId: string;
+  receiptNumber: string;
+  issuedAt: string;
+  pdfUrl?: string | null;
+  payment?: PaymentDto;
+  allocations?: PaymentAllocationDto[];
+}
+
+export function createFeeStructure(input: {
+  academicYearId: string;
+  termId: string;
+  levelId: string;
+  name: string;
+  feeItems: { name: string; amount: number; isOptional?: boolean }[];
+}): Promise<FeeStructureDto> {
+  return apiFetch<FeeStructureDto>("/fee-structures", { method: "POST", auth: true, body: input });
+}
+
+export function listFeeStructures(params: { academicYearId?: string; termId?: string; levelId?: string } = {}): Promise<FeeStructureDto[]> {
+  const searchParams = new URLSearchParams();
+  if (params.academicYearId) searchParams.set("academicYearId", params.academicYearId);
+  if (params.termId) searchParams.set("termId", params.termId);
+  if (params.levelId) searchParams.set("levelId", params.levelId);
+  const query = searchParams.toString();
+  return apiFetch<FeeStructureDto[]>(`/fee-structures${query ? `?${query}` : ""}`, { auth: true });
+}
+
+export function getFeeStructure(id: string): Promise<FeeStructureDto> {
+  return apiFetch<FeeStructureDto>(`/fee-structures/${id}`, { auth: true });
+}
+
+export function generateInvoices(input: { termId: string; classId?: string; levelId?: string }): Promise<GenerateInvoicesResultDto> {
+  return apiFetch<GenerateInvoicesResultDto>("/invoices/generate", { method: "POST", auth: true, body: input });
+}
+
+export function listInvoices(params: { learnerId?: string; termId?: string; status?: InvoiceStatus } = {}): Promise<InvoiceDto[]> {
+  const searchParams = new URLSearchParams();
+  if (params.learnerId) searchParams.set("learnerId", params.learnerId);
+  if (params.termId) searchParams.set("termId", params.termId);
+  if (params.status) searchParams.set("status", params.status);
+  const query = searchParams.toString();
+  return apiFetch<InvoiceDto[]>(`/invoices${query ? `?${query}` : ""}`, { auth: true });
+}
+
+export function getInvoice(id: string): Promise<InvoiceDto> {
+  return apiFetch<InvoiceDto>(`/invoices/${id}`, { auth: true });
+}
+
+export function updateInvoice(
+  id: string,
+  input: { addLineItems?: { description: string; amount: number }[]; removeLineItemIds?: string[]; dueDate?: string },
+): Promise<InvoiceDto> {
+  return apiFetch<InvoiceDto>(`/invoices/${id}`, { method: "PATCH", auth: true, body: input });
+}
+
+export function initiateMomoPayment(input: {
+  invoiceId: string;
+  amount: number;
+  phone: string;
+  provider: MomoProvider;
+}): Promise<InitiateMomoResponseDto> {
+  return apiFetch<InitiateMomoResponseDto>("/payments/momo/initiate", { method: "POST", auth: true, body: input });
+}
+
+export function createCashPayment(input: {
+  invoiceId: string;
+  amount: number;
+  method: "cash" | "bank_transfer";
+  reference?: string;
+}): Promise<PaymentDto> {
+  return apiFetch<PaymentDto>("/payments/cash", { method: "POST", auth: true, body: input });
+}
+
+export function getPaymentStatus(id: string): Promise<PaymentDto> {
+  return apiFetch<PaymentDto>(`/payments/${id}/status`, { auth: true });
+}
+
+export function getReceipt(id: string): Promise<ReceiptDto> {
+  return apiFetch<ReceiptDto>(`/receipts/${id}`, { auth: true });
 }

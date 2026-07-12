@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { APP_GUARD } from "@nestjs/core";
 import { ScheduleModule } from "@nestjs/schedule";
 import { EventEmitterModule } from "@nestjs/event-emitter";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import configuration from "./config/configuration";
 import { PrismaModule } from "./prisma/prisma.module";
 import { HealthModule } from "./health/health.module";
@@ -33,6 +35,14 @@ import { CommunicationsModule } from "./modules/communications/communications.mo
     // `forRoot()` registers `EventEmitter2` globally, same pattern as
     // `ConfigModule.forRoot({ isGlobal: true })`.
     EventEmitterModule.forRoot(),
+    // Global per-IP rate limit (in-memory): a generous default that only
+    // exists to blunt scripted abuse, not to constrain real users. The
+    // credential endpoints override this with a much stricter 5/60s
+    // (`@Throttle` in AuthController), and the two public provider
+    // webhooks (Paystack, Arkesel DLR) opt out entirely via
+    // `@SkipThrottle()` — payment providers retry on 429 and that retry
+    // churn is worse than the throttling benefit.
+    ThrottlerModule.forRoot([{ name: "default", ttl: 60_000, limit: 100 }]),
     PrismaModule,
     TenantContextModule,
     AuditModule,
@@ -45,6 +55,11 @@ import { CommunicationsModule } from "./modules/communications/communications.mo
     AcademicsModule,
     FeesModule,
     CommunicationsModule,
+  ],
+  providers: [
+    // Applies the ThrottlerModule limits to every route by default;
+    // per-route @Throttle/@SkipThrottle decorators override it.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

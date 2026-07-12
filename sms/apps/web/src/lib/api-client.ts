@@ -31,7 +31,10 @@ export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
 }
 
 const ACCESS_TOKEN_KEY = "sms.accessToken";
-const REFRESH_TOKEN_KEY = "sms.refreshToken";
+// No longer written — the refresh token lives in the `sms_refresh`
+// httpOnly cookie set by the API. Kept only so clearTokens/setTokens can
+// scrub the value older builds left behind in localStorage.
+const LEGACY_REFRESH_TOKEN_KEY = "sms.refreshToken";
 const USER_KEY = "sms.user";
 
 export interface StoredUser {
@@ -58,10 +61,19 @@ export function getCurrentUser(): StoredUser | null {
   }
 }
 
-export function setTokens(auth: { accessToken: string; refreshToken: string; user?: StoredUser }): void {
+/**
+ * Stores the short-lived access token (and user summary) in localStorage.
+ * The refresh token is deliberately NOT handled here — it lives in the
+ * `sms_refresh` httpOnly cookie the API sets on login/refresh, out of
+ * reach of JavaScript. (Moving the access token itself out of
+ * localStorage — e.g. into memory only — is a further-hardening
+ * candidate, accepted tradeoff for now.)
+ */
+export function setTokens(auth: { accessToken: string; user?: StoredUser }): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(ACCESS_TOKEN_KEY, auth.accessToken);
-  window.localStorage.setItem(REFRESH_TOKEN_KEY, auth.refreshToken);
+  // Scrub any refresh token an older build persisted.
+  window.localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
   if (auth.user) {
     window.localStorage.setItem(USER_KEY, JSON.stringify(auth.user));
   }
@@ -70,8 +82,23 @@ export function setTokens(auth: { accessToken: string; refreshToken: string; use
 export function clearTokens(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-  window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+  window.localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
   window.localStorage.removeItem(USER_KEY);
+}
+
+/**
+ * Ends the session: asks the API to clear the `sms_refresh` httpOnly
+ * cookie (needs `credentials: "include"` so the cookie is sent), then
+ * drops local state. Best-effort — local state is cleared even if the
+ * network call fails.
+ */
+export async function logout(): Promise<void> {
+  try {
+    await apiFetch<undefined>("/auth/logout", { method: "POST", credentials: "include" });
+  } catch {
+    // Ignore — clearing local state below is what logs the UI out.
+  }
+  clearTokens();
 }
 
 export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {

@@ -1,4 +1,5 @@
 import { Body, Controller, HttpCode, HttpStatus, Logger, Post } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 
@@ -30,6 +31,10 @@ type DeliveryStatus = "delivered" | "failed" | "sent";
  * body into `MessageDeliveryEvent`, so nothing is silently lost even if
  * the real field names differ from what's guessed here.
  */
+// Exempt from the global rate limit: SMS aggregators retry DLR callbacks
+// on non-2xx (including 429), and that retry churn is worse than the
+// throttling benefit for an endpoint that only annotates existing rows.
+@SkipThrottle()
 @Controller("messages/webhooks")
 export class MessagesWebhookController {
   private readonly logger = new Logger(MessagesWebhookController.name);

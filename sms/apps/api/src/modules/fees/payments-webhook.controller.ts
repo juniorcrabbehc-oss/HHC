@@ -1,5 +1,6 @@
 import { Body, Controller, Headers, HttpCode, HttpStatus, Logger, Post, Req, UnauthorizedException } from "@nestjs/common";
 import type { RawBodyRequest } from "@nestjs/common";
+import { SkipThrottle } from "@nestjs/throttler";
 import type { Request } from "express";
 import { PaystackClient } from "./paystack/paystack.client";
 import { PaymentsProcessingService } from "./payments-processing.service";
@@ -17,6 +18,10 @@ import type { PaystackWebhookEvent } from "./paystack/paystack.types";
  * against the *raw* request body (see `main.ts`'s `rawBody: true` and
  * `PaystackClient.verifyWebhookSignature`), not a JWT.
  */
+// Exempt from the global rate limit: Paystack retries webhook deliveries
+// on non-2xx (including 429), and that retry churn is worse than the
+// throttling benefit. The HMAC signature check is the gate here.
+@SkipThrottle()
 @Controller("payments/webhooks")
 export class PaymentsWebhookController {
   private readonly logger = new Logger(PaymentsWebhookController.name);

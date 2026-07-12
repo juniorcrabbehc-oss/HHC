@@ -21,15 +21,19 @@ export default function LoginPage() {
     const isEmail = identifier.includes("@");
 
     try {
+      // `credentials: "include"` lets the browser store the `sms_refresh`
+      // httpOnly refresh-token cookie the API sets on this cross-origin
+      // response; the JSON body only carries the access token + user.
       const response = await apiFetch<AuthResponse>("/auth/login", {
         method: "POST",
+        credentials: "include",
         body: {
           [isEmail ? "email" : "phone"]: identifier,
           password,
         },
       });
 
-      setTokens(response);
+      setTokens({ accessToken: response.accessToken, user: response.user });
       setSuccess(true);
     } catch (err) {
       if (err instanceof ApiError) {

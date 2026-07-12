@@ -6,7 +6,17 @@ import type { AuthResponse, JwtPayload, Role } from "@sms/shared-types";
 import type { AppConfig } from "../../config/configuration";
 import { PrismaService } from "../../prisma/prisma.service";
 import type { LoginDto } from "./dto/login.dto";
-import type { RefreshDto } from "./dto/refresh.dto";
+
+/**
+ * Result of a successful login/refresh. `auth` is what goes in the JSON
+ * response body; `refreshToken` is kept out of the body on purpose — the
+ * controller transports it exclusively via the `sms_refresh` httpOnly
+ * cookie.
+ */
+export interface AuthResult {
+  auth: AuthResponse;
+  refreshToken: string;
+}
 
 @Injectable()
 export class AuthService {
@@ -16,7 +26,7 @@ export class AuthService {
     private readonly configService: ConfigService<AppConfig, true>,
   ) {}
 
-  async login(dto: LoginDto): Promise<AuthResponse> {
+  async login(dto: LoginDto): Promise<AuthResult> {
     const user = await this.prisma.user.findFirst({
       where: {
         AND: [
@@ -60,24 +70,26 @@ export class AuthService {
     const { accessToken, refreshToken } = this.issueTokens(payload);
 
     return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        schoolId: user.schoolId,
-        email: user.email,
-        phone: user.phone,
-        roles,
+      auth: {
+        accessToken,
+        user: {
+          id: user.id,
+          schoolId: user.schoolId,
+          email: user.email,
+          phone: user.phone,
+          roles,
+        },
       },
+      refreshToken,
     };
   }
 
-  async refresh(dto: RefreshDto): Promise<AuthResponse> {
+  async refresh(refreshTokenInput: string): Promise<AuthResult> {
     const jwtConfig = this.configService.get("jwt", { infer: true });
 
     let payload: JwtPayload;
     try {
-      payload = this.jwtService.verify<JwtPayload>(dto.refreshToken, {
+      payload = this.jwtService.verify<JwtPayload>(refreshTokenInput, {
         secret: jwtConfig.refreshSecret,
       });
     } catch {
@@ -98,16 +110,38 @@ export class AuthService {
     const { accessToken, refreshToken } = this.issueTokens(nextPayload);
 
     return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        schoolId: user.schoolId,
-        email: user.email,
-        phone: user.phone,
-        roles,
+      auth: {
+        accessToken,
+        user: {
+          id: user.id,
+          schoolId: user.schoolId,
+          email: user.email,
+          phone: user.phone,
+          roles,
+        },
       },
+      refreshToken,
     };
+  }
+
+  /**
+   * Lifetime of the refresh cookie in milliseconds, derived from the same
+   * `JWT_REFRESH_TTL` config the refresh JWT itself is signed with, so the
+   * cookie and the token inside it expire together. Supports the common
+   * ms-style duration strings used in `.env` ("30d", "12h", "15m", "45s")
+   * and plain numbers (seconds, matching jsonwebtoken's convention).
+   */
+  getRefreshTtlMs(): number {
+    const ttl = this.configService.get("jwt", { infer: true }).refreshTtl;
+    const match = /^(\d+)\s*(d|h|m|s)?$/i.exec(ttl.trim());
+    if (!match) {
+      // Unrecognized format — fall back to 30 days rather than crashing.
+      return 30 * 24 * 60 * 60 * 1000;
+    }
+    const value = Number(match[1]);
+    const unit = (match[2] ?? "s").toLowerCase();
+    const unitMs: Record<string, number> = { d: 86_400_000, h: 3_600_000, m: 60_000, s: 1_000 };
+    return value * unitMs[unit];
   }
 
   private issueTokens(payload: JwtPayload): { accessToken: string; refreshToken: string } {

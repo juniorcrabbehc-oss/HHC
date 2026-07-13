@@ -1,0 +1,52 @@
+# Render blueprint — deploys the SMS API as a web service.
+# The Next.js web app deploys separately on Vercel (see sms/DEPLOY.md).
+#
+# On first use: Render dashboard -> New -> Blueprint -> pick this repo.
+# Render reads this file from the repo root.
+services:
+  - type: web
+    name: sms-api
+    runtime: node
+    plan: free
+    rootDir: sms
+    # `pnpm --filter api exec` runs each command with cwd = apps/api.
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter api exec prisma generate --schema=src/prisma/schema.prisma &&
+      pnpm --filter api exec tsc -p tsconfig.build.json
+    # Migrations run before the server starts so the schema is always
+    # current; `migrate deploy` only applies committed migration files
+    # (never generates new ones) — safe for production.
+    startCommand: >-
+      cd apps/api &&
+      npx prisma migrate deploy --schema=src/prisma/schema.prisma &&
+      node dist/main.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: DATABASE_URL
+        sync: false # paste the Neon connection string in the dashboard
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 30d
+      - key: WEB_ORIGIN
+        sync: false # the Vercel URL, e.g. https://sms-web.vercel.app
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false
+      - key: PAYSTACK_WEBHOOK_SECRET
+        sync: false
+      - key: ARKESEL_API_KEY
+        sync: false
+      - key: ARKESEL_SENDER_ID
+        sync: false

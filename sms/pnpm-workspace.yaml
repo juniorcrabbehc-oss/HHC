@@ -2,12 +2,13 @@ packages:
   - "apps/*"
   - "packages/*"
 
-# pnpm >=10 blocks dependency postinstall scripts by default
+# pnpm blocks dependency postinstall scripts by default
 # (ERR_PNPM_IGNORED_BUILDS). These packages genuinely need theirs:
 # Prisma downloads its query engines, bcrypt builds native bindings.
-onlyBuiltDependencies:
-  - "@nestjs/core"
-  - "@prisma/client"
-  - "@prisma/engines"
-  - bcrypt
-  - prisma
+# pnpm 11 syntax — `allowBuilds` replaced v10's `onlyBuiltDependencies`.
+allowBuilds:
+  "@nestjs/core": true
+  "@prisma/client": true
+  "@prisma/engines": true
+  bcrypt: true
+  prisma: true

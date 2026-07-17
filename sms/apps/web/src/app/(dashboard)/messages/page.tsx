@@ -4,8 +4,8 @@ import { MessagesInbox } from "../../../features/communications/MessagesInbox";
 
 export default function MessagesInboxPage() {
   return (
-    <main>
-      <h1>Messages</h1>
+    <main className="page page-narrow">
+      <h1 className="page-title">Messages</h1>
       <MessagesInbox />
     </main>
   );

@@ -108,74 +108,94 @@ export function ReportCardAdmin() {
 
   return (
     <div>
-      <div>
-        <label htmlFor="class-select">Class</label>
-        <select id="class-select" value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
-          {classes.length === 0 && <option value="">No classes available</option>}
-          {classes.map((cls) => (
-            <option key={cls.id} value={cls.id}>
-              {cls.name}
-            </option>
-          ))}
-        </select>
+      <div className="toolbar">
+        <div className="field">
+          <label htmlFor="class-select">Class</label>
+          <select id="class-select" value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
+            {classes.length === 0 && <option value="">No classes available</option>}
+            {classes.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <label htmlFor="term-select">Term</label>
-        <select id="term-select" value={termId} onChange={(e) => setTermId(e.target.value)}>
-          {terms.length === 0 && <option value="">No terms available</option>}
-          {terms.map((term) => (
-            <option key={term.id} value={term.id}>
-              {term.name}
-            </option>
-          ))}
-        </select>
+        <div className="field">
+          <label htmlFor="term-select">Term</label>
+          <select id="term-select" value={termId} onChange={(e) => setTermId(e.target.value)}>
+            {terms.length === 0 && <option value="">No terms available</option>}
+            {terms.map((term) => (
+              <option key={term.id} value={term.id}>
+                {term.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <button type="button" onClick={() => void handleGenerate()} disabled={isGenerating || !selectedClassId || !termId}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => void handleGenerate()}
+          disabled={isGenerating || !selectedClassId || !termId}
+        >
           {isGenerating ? "Generating..." : "Generate report cards"}
         </button>
 
-        <button type="button" onClick={() => void handlePublishAll()} disabled={!hasDrafts}>
+        <button type="button" className="btn" onClick={() => void handlePublishAll()} disabled={!hasDrafts}>
           Publish all drafts
         </button>
       </div>
 
-      {error && <p role="alert">{error}</p>}
-      {isLoading && <p>Loading report cards...</p>}
+      {error && <p role="alert" className="alert alert-error">{error}</p>}
+      {isLoading && <p className="loading">Loading report cards...</p>}
 
       {!isLoading && reportCards.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Position</th>
-              <th>Learner</th>
-              <th>Average</th>
-              <th>Grade</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {reportCards.map((rc) => (
-              <tr key={rc.id}>
-                <td>{rc.positionInClass ?? "—"}</td>
-                <td>{rc.learner ? `${rc.learner.lastName}, ${rc.learner.firstName}` : rc.learnerId}</td>
-                <td>{rc.overallAverage ?? "—"}</td>
-                <td>{rc.overallGrade ?? "—"}</td>
-                <td>{rc.status}</td>
-                <td>
-                  <Link href={`/report-cards/${rc.id}`}>View</Link>{" "}
-                  {rc.status === "draft" && (
-                    <button type="button" onClick={() => void handlePublish(rc.id)} disabled={publishingId === rc.id}>
-                      {publishingId === rc.id ? "Publishing..." : "Publish"}
-                    </button>
-                  )}
-                </td>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th className="num">Position</th>
+                <th>Learner</th>
+                <th className="num">Average</th>
+                <th>Grade</th>
+                <th>Status</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {reportCards.map((rc) => (
+                <tr key={rc.id}>
+                  <td className="num">{rc.positionInClass ?? "—"}</td>
+                  <td>{rc.learner ? `${rc.learner.lastName}, ${rc.learner.firstName}` : rc.learnerId}</td>
+                  <td className="num">{rc.overallAverage ?? "—"}</td>
+                  <td>{rc.overallGrade ?? "—"}</td>
+                  <td>
+                    <span className={`pill ${rc.status === "published" ? "pill-success" : "pill-warning"}`}>
+                      {rc.status}
+                    </span>
+                  </td>
+                  <td className="nowrap">
+                    <Link href={`/report-cards/${rc.id}`}>View</Link>{" "}
+                    {rc.status === "draft" && (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        onClick={() => void handlePublish(rc.id)}
+                        disabled={publishingId === rc.id}
+                      >
+                        {publishingId === rc.id ? "Publishing..." : "Publish"}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {!isLoading && reportCards.length === 0 && !error && <p>No report cards generated yet for this class/term.</p>}
+      {!isLoading && reportCards.length === 0 && !error && <p className="muted">No report cards generated yet for this class/term.</p>}
     </div>
   );
 }

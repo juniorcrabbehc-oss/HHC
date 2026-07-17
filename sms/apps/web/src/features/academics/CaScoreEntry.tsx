@@ -183,110 +183,138 @@ export function CaScoreEntry() {
 
   return (
     <div>
-      <div>
-        <label htmlFor="class-select">Class</label>
-        <select id="class-select" value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
-          {classes.length === 0 && <option value="">No classes available</option>}
-          {classes.map((cls) => (
-            <option key={cls.id} value={cls.id}>
-              {cls.name}
-            </option>
-          ))}
-        </select>
+      <div className="toolbar">
+        <div className="field">
+          <label htmlFor="class-select">Class</label>
+          <select id="class-select" value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
+            {classes.length === 0 && <option value="">No classes available</option>}
+            {classes.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <label htmlFor="subject-select">Subject</label>
-        <select id="subject-select" value={selectedClassSubjectId} onChange={(e) => setSelectedClassSubjectId(e.target.value)}>
-          {classSubjects.length === 0 && <option value="">No subjects assigned to you in this class</option>}
-          {classSubjects.map((cs) => (
-            <option key={cs.id} value={cs.id}>
-              {cs.subject?.name ?? cs.subjectId}
-            </option>
-          ))}
-        </select>
+        <div className="field">
+          <label htmlFor="subject-select">Subject</label>
+          <select id="subject-select" value={selectedClassSubjectId} onChange={(e) => setSelectedClassSubjectId(e.target.value)}>
+            {classSubjects.length === 0 && <option value="">No subjects assigned to you in this class</option>}
+            {classSubjects.map((cs) => (
+              <option key={cs.id} value={cs.id}>
+                {cs.subject?.name ?? cs.subjectId}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <button type="button" onClick={() => void syncNow().then(() => refreshPending())} disabled={isSyncing}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => void syncNow().then(() => refreshPending())}
+          disabled={isSyncing}
+        >
           {isSyncing ? "Syncing..." : `Sync now${pendingCount > 0 ? ` (${pendingCount} pending)` : ""}`}
         </button>
       </div>
 
       <fieldset>
         <legend>Assessment</legend>
-        <label htmlFor="assessment-type">Name</label>
-        <input
-          id="assessment-type"
-          type="text"
-          value={assessmentType}
-          onChange={(e) => setAssessmentType(e.target.value)}
-        />
+        <div className="toolbar">
+          <div className="field">
+            <label htmlFor="assessment-type">Name</label>
+            <input
+              id="assessment-type"
+              type="text"
+              value={assessmentType}
+              onChange={(e) => setAssessmentType(e.target.value)}
+            />
+          </div>
 
-        <label htmlFor="max-score">Max score</label>
-        <input
-          id="max-score"
-          type="number"
-          min={1}
-          value={maxScore}
-          onChange={(e) => setMaxScore(Number(e.target.value))}
-        />
+          <div className="field">
+            <label htmlFor="max-score">Max score</label>
+            <input
+              id="max-score"
+              type="number"
+              min={1}
+              value={maxScore}
+              onChange={(e) => setMaxScore(Number(e.target.value))}
+            />
+          </div>
 
-        <label htmlFor="weight-pct">Weight % (of this subject's CA pool)</label>
-        <input
-          id="weight-pct"
-          type="number"
-          min={0}
-          max={100}
-          value={weightPct}
-          onChange={(e) => setWeightPct(Number(e.target.value))}
-        />
+          <div className="field">
+            <label htmlFor="weight-pct">Weight % (of this subject's CA pool)</label>
+            <input
+              id="weight-pct"
+              type="number"
+              min={0}
+              max={100}
+              value={weightPct}
+              onChange={(e) => setWeightPct(Number(e.target.value))}
+            />
+          </div>
+        </div>
       </fieldset>
 
-      {isOffline && <p role="status">Offline — showing the last cached roster for this class/subject/term.</p>}
-      {pendingCount > 0 && <p role="status">{pendingCount} score entr{pendingCount === 1 ? "y" : "ies"} queued, waiting to sync.</p>}
-      {isLoading && <p>Loading roster...</p>}
-      {error && <p role="alert">{error}</p>}
-      {!selectedClassSubject && classSubjects.length > 0 && <p>Select a subject to enter scores.</p>}
-      {!termId && selectedClassSubjectId && <p>Resolving the current term for this class...</p>}
+      {isOffline && (
+        <p role="status" className="alert alert-info">
+          Offline — showing the last cached roster for this class/subject/term.
+        </p>
+      )}
+      {pendingCount > 0 && (
+        <p role="status" className="alert alert-warning">
+          {pendingCount} score entr{pendingCount === 1 ? "y" : "ies"} queued, waiting to sync.
+        </p>
+      )}
+      {isLoading && <p className="loading">Loading roster...</p>}
+      {error && <p role="alert" className="alert alert-error">{error}</p>}
+      {!selectedClassSubject && classSubjects.length > 0 && <p className="muted">Select a subject to enter scores.</p>}
+      {!termId && selectedClassSubjectId && <p className="loading">Resolving the current term for this class...</p>}
 
       {!isLoading && rows.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Admission #</th>
-              <th>Name</th>
-              <th>{assessmentType || "Score"} (/{maxScore})</th>
-              <th>Queued</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const pending = pendingMap[row.learnerId];
-              const existing = existingScoreFor(row);
-              const value = pending?.scoreObtained ?? existing?.scoreObtained ?? "";
-              const isQueued = Boolean(pending);
-              return (
-                <tr key={row.learnerId}>
-                  <td>{row.admissionNumber}</td>
-                  <td>
-                    {row.lastName}, {row.firstName}
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      min={0}
-                      max={maxScore}
-                      value={value}
-                      disabled={!termId}
-                      onChange={(e) => void handleScoreChange(row.learnerId, e.target.value)}
-                    />
-                  </td>
-                  <td>{isQueued ? "queued" : ""}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Admission #</th>
+                <th>Name</th>
+                <th>{assessmentType || "Score"} (/{maxScore})</th>
+                <th>Queued</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const pending = pendingMap[row.learnerId];
+                const existing = existingScoreFor(row);
+                const value = pending?.scoreObtained ?? existing?.scoreObtained ?? "";
+                const isQueued = Boolean(pending);
+                return (
+                  <tr key={row.learnerId}>
+                    <td>{row.admissionNumber}</td>
+                    <td className="nowrap">
+                      {row.lastName}, {row.firstName}
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min={0}
+                        max={maxScore}
+                        value={value}
+                        disabled={!termId}
+                        style={{ width: 96 }}
+                        onChange={(e) => void handleScoreChange(row.learnerId, e.target.value)}
+                      />
+                    </td>
+                    <td>{isQueued ? <span className="pill pill-warning">queued</span> : ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {!isLoading && rows.length === 0 && !error && <p>No learners actively enrolled in this class.</p>}
+      {!isLoading && rows.length === 0 && !error && <p className="muted">No learners actively enrolled in this class.</p>}
     </div>
   );
 }

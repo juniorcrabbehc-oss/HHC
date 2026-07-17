@@ -47,39 +47,51 @@ export default function LoginPage() {
   }
 
   return (
-    <main>
-      <h1>Sign in</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="identifier">Email or phone</label>
-          <input
-            id="identifier"
-            name="identifier"
-            type="text"
-            autoComplete="username"
-            value={identifier}
-            onChange={(event) => setIdentifier(event.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </div>
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
-        {error && <p role="alert">{error}</p>}
-        {success && <p>Signed in successfully.</p>}
-      </form>
+    <main className="auth-page">
+      <div className="auth-card">
+        <p className="auth-wordmark">Sunrise International School</p>
+        <p className="auth-subtitle">School Management System</p>
+        <h1>Sign in</h1>
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="identifier">Email or phone</label>
+            <input
+              id="identifier"
+              name="identifier"
+              type="text"
+              autoComplete="username"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Sign in"}
+          </button>
+          {error && (
+            <p role="alert" className="alert alert-error" style={{ marginTop: 14 }}>
+              {error}
+            </p>
+          )}
+          {success && (
+            <p className="alert alert-success" style={{ marginTop: 14 }}>
+              Signed in successfully.
+            </p>
+          )}
+        </form>
+      </div>
     </main>
   );
 }

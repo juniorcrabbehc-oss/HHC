@@ -38,18 +38,18 @@ export function MessagesInbox() {
     };
   }, []);
 
-  if (isLoading) return <p>Loading messages...</p>;
-  if (error) return <p role="alert">{error}</p>;
+  if (isLoading) return <p className="loading">Loading messages...</p>;
+  if (error) return <p role="alert" className="alert alert-error">{error}</p>;
 
   return (
-    <ul>
+    <ul className="message-list">
       {messages.map((message) => (
         <li key={message.id}>
           <p>{message.body}</p>
           <small>{new Date(message.createdAt).toLocaleString()}</small>
         </li>
       ))}
-      {messages.length === 0 && <li>No messages yet.</li>}
+      {messages.length === 0 && <li className="muted">No messages yet.</li>}
     </ul>
   );
 }

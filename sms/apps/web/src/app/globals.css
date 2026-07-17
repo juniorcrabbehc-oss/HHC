@@ -1,0 +1,787 @@
+/* ==========================================================================
+   SMS — global stylesheet (single source of truth for the web app's look).
+   Light theme only, system fonts, token-driven. Structure:
+     1. Design tokens
+     2. Reset + element base styles (unclassed corners still look decent)
+     3. App shell (top bar, role nav)
+     4. Components (.btn, .card, .table-wrap, .pill, .field, .alert, ...)
+     5. Auth (login) page
+     6. Utilities + responsive + reduced motion
+   ========================================================================== */
+
+/* 1. Design tokens ------------------------------------------------------- */
+
+:root {
+  --color-primary: #1b6e4a;
+  --color-primary-hover: #14563a;
+  --color-ink: #1c2321;
+  --color-text: #3a4442;
+  --color-muted: #6b7573;
+  --color-bg: #f5f7f6;
+  --color-surface: #ffffff;
+  --color-border: #dce3e0;
+
+  --color-success: #1b6e4a;
+  --color-success-bg: #e7f2ec;
+  --color-warning: #9a6a00;
+  --color-warning-bg: #fbf3dc;
+  --color-danger: #b3362a;
+  --color-danger-bg: #f9e9e7;
+  --color-info: #28617c;
+  --color-info-bg: #e8f1f5;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow-raised: 0 1px 2px rgba(28, 35, 33, 0.06), 0 2px 8px rgba(28, 35, 33, 0.07);
+
+  --font-sans: -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+
+  --fs-meta: 13px;
+  --fs-control: 14px;
+  --fs-body: 15px;
+  --fs-section: 18px;
+  --fs-page: 22px;
+
+  --control-h: 40px;
+}
+
+/* 2. Reset + element base styles ----------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--color-ink);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 12px;
+}
+
+h1 {
+  font-size: var(--fs-page);
+  margin-bottom: 16px;
+}
+
+h2 {
+  font-size: var(--fs-section);
+  margin-top: 28px;
+}
+
+h3 {
+  font-size: 16px;
+  margin-top: 24px;
+}
+
+h2:first-child,
+h3:first-child {
+  margin-top: 0;
+}
+
+p {
+  margin: 0 0 12px;
+}
+
+small {
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+}
+
+a {
+  color: var(--color-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+ul {
+  padding-left: 20px;
+  margin: 0 0 12px;
+}
+
+/* Tables — full base treatment so even unclassed tables read well. */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  font-size: var(--fs-meta);
+}
+
+th,
+td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+thead th {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover td {
+  background: #f2f6f4;
+}
+
+/* Form controls — element-level so unclassed inputs still look right. */
+label {
+  display: block;
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: var(--fs-control);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0 10px;
+  height: var(--control-h);
+  max-width: 100%;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+textarea {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  height: 18px;
+  width: 18px;
+  padding: 0;
+  accent-color: var(--color-primary);
+  vertical-align: -3px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+  border-color: var(--color-primary);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+::placeholder {
+  color: var(--color-muted);
+  opacity: 0.8;
+}
+
+/* Buttons — base = secondary look; .btn-primary/.btn-danger override.
+   `.btn` lets links (<a>/<Link>) pick up the identical treatment. */
+button,
+.btn {
+  font-family: inherit;
+  font-size: var(--fs-control);
+  font-weight: 600;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  height: var(--control-h);
+  padding: 0 14px;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+a.btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+a.btn:hover {
+  text-decoration: none;
+}
+
+button:hover:not(:disabled),
+a.btn:hover {
+  background: #eef3f0;
+  border-color: #c9d3cf;
+  color: var(--color-ink);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Fieldsets appear across forms — give them the card treatment. */
+fieldset {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 0 0 20px;
+  min-inline-size: 0;
+}
+
+legend {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--color-ink);
+  padding: 0 6px;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 20px 0;
+}
+
+/* 3. App shell ------------------------------------------------------------ */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 20px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topbar-brand {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.topbar-email {
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.role-chip {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-success-bg);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.navbar {
+  display: flex;
+  gap: 4px;
+  padding: 0 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nav-link {
+  display: inline-block;
+  padding: 12px 12px 10px;
+  font-size: var(--fs-control);
+  font-weight: 500;
+  color: var(--color-muted);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.nav-link:hover {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.nav-link.is-active {
+  color: var(--color-primary);
+  font-weight: 600;
+  border-bottom-color: var(--color-primary);
+}
+
+.btn-signout {
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--fs-meta);
+}
+
+/* 4. Components ------------------------------------------------------------ */
+
+/* Page container (the <main> of each dashboard page). */
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+.page-narrow {
+  max-width: 640px;
+}
+
+.page-title {
+  font-size: var(--fs-page);
+  margin-bottom: 16px;
+}
+
+/* Buttons */
+.btn-primary,
+a.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled),
+a.btn-primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: #fff;
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #96271c;
+  border-color: #96271c;
+  color: #fff;
+}
+
+.btn-sm {
+  height: 32px;
+  padding: 0 10px;
+  font-size: var(--fs-meta);
+}
+
+/* Toggle buttons (attendance status marks): selected = green fill. */
+.btn-toggle[aria-pressed="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn-toggle[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+/* Cards */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.card-raised {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-raised);
+}
+
+/* Tables: always wrap a <table> in .table-wrap — it carries the card
+   chrome and the mobile horizontal scroll. */
+.table-wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 20px;
+}
+
+.table-wrap table {
+  margin: 0;
+}
+
+/* Numeric columns (money, scores): right-aligned tabular figures. */
+.num {
+  text-align: right;
+}
+
+/* Status pills */
+.pill {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: var(--color-bg);
+  color: var(--color-muted);
+}
+
+.pill-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.pill-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.pill-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.pill-info {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+/* Forms */
+.field {
+  margin-bottom: 14px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+}
+
+.field-checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-control);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.form {
+  max-width: 560px;
+}
+
+/* Filter/action rows above tables: fields sit side by side and wrap. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.toolbar .field {
+  margin-bottom: 0;
+  min-width: 160px;
+  flex: 0 1 auto;
+}
+
+.toolbar .field input,
+.toolbar .field select {
+  width: 100%;
+}
+
+fieldset .toolbar:last-child {
+  margin-bottom: 0;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* Repeated sub-blocks inside a form (e.g. guardian rows). */
+.form-row-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fafcfb;
+}
+
+/* Feedback states */
+.loading {
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.alert {
+  border-radius: var(--radius);
+  border-left: 4px solid var(--color-info);
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  font-size: var(--fs-control);
+  padding: 10px 12px;
+  margin: 0 0 14px;
+}
+
+.alert ul {
+  margin: 6px 0 0;
+}
+
+.alert p {
+  margin: 0 0 6px;
+}
+
+.alert p:last-child {
+  margin-bottom: 0;
+}
+
+.alert-error {
+  border-left-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.alert-success {
+  border-left-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.alert-warning {
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+/* Definition-style meta lines (invoice header, report card header). */
+.meta-line {
+  font-size: var(--fs-control);
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+
+.meta-line strong {
+  color: var(--color-ink);
+}
+
+/* Stat strip (invoice totals, report card overall figures). */
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+
+.stat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  min-width: 120px;
+  flex: 1 1 120px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Message inbox list */
+.message-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+}
+
+.message-list li {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+.message-list li p {
+  margin-bottom: 6px;
+}
+
+/* Inline expandable action (MessageGuardianAction). */
+.inline-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.inline-action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* 5. Auth (login) page ------------------------------------------------------ */
+
+.auth-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--color-bg);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-raised);
+  padding: 32px 28px;
+}
+
+.auth-wordmark {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: 0.01em;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.auth-subtitle {
+  font-size: var(--fs-meta);
+  color: var(--color-muted);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-card h1 {
+  font-size: var(--fs-section);
+  margin-bottom: 16px;
+}
+
+.auth-card .btn-primary {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* 6. Utilities, responsive, reduced motion ---------------------------------- */
+
+.muted {
+  color: var(--color-muted);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 16px 12px 40px;
+  }
+
+  .topbar {
+    padding: 8px 12px;
+  }
+
+  .topbar-email {
+    display: none;
+  }
+
+  .navbar {
+    padding: 0 4px;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+  }
+
+  .toolbar .field {
+    flex: 1 1 140px;
+    min-width: 140px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

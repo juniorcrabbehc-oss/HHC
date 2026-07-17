@@ -25,6 +25,35 @@ function formatDateTime(value?: string | null): string {
   return value ? new Date(value).toLocaleString() : "—";
 }
 
+/** Presentational: maps an invoice status to its semantic pill class. */
+function invoiceStatusPill(status: InvoiceDto["status"]): string {
+  switch (status) {
+    case "paid":
+      return "pill pill-success";
+    case "partially_paid":
+      return "pill pill-warning";
+    case "unpaid":
+    case "overdue":
+      return "pill pill-danger";
+    default:
+      return "pill";
+  }
+}
+
+/** Presentational: maps a payment status to its semantic pill class. */
+function paymentStatusPill(status: PaymentDto["status"]): string {
+  switch (status) {
+    case "success":
+      return "pill pill-success";
+    case "pending":
+      return "pill pill-warning";
+    case "failed":
+      return "pill pill-danger";
+    default:
+      return "pill";
+  }
+}
+
 /**
  * `PaymentDto.receiptId` (added alongside this component) closes the
  * "receipt by payment" gap — once a payment succeeds, its receipt is
@@ -48,7 +77,7 @@ function ReceiptPanel({ receiptId }: { receiptId: string }) {
   if (!receipt) return null;
 
   return (
-    <p role="status">
+    <p role="status" className="alert alert-success">
       Receipt {receipt.receiptNumber} issued {formatDateTime(receipt.issuedAt)}.
     </p>
   );
@@ -193,119 +222,143 @@ export function InvoiceDetail({ id }: { id: string }) {
     }
   }
 
-  if (isLoading) return <p>Loading invoice...</p>;
-  if (error) return <p role="alert">{error}</p>;
-  if (!invoice) return <p>Invoice not found.</p>;
+  if (isLoading) return <p className="loading">Loading invoice...</p>;
+  if (error) return <p role="alert" className="alert alert-error">{error}</p>;
+  if (!invoice) return <p className="muted">Invoice not found.</p>;
 
   const isPayable = (invoice.status === "unpaid" || invoice.status === "partially_paid") && invoice.balance > 0;
 
   return (
     <div>
       <h2>Invoice {invoice.invoiceNumber}</h2>
-      <p>
+      <p className="meta-line">
         Learner: {invoice.learner ? `${invoice.learner.lastName}, ${invoice.learner.firstName}` : invoice.learnerId}
       </p>
-      <p>
+      <p className="meta-line">
         Issue date: {new Date(invoice.issueDate).toLocaleDateString()} — Due date:{" "}
         {new Date(invoice.dueDate).toLocaleDateString()}
       </p>
-      <p>
-        <strong>Status:</strong> {invoice.status}
+      <p className="meta-line">
+        <strong>Status:</strong> <span className={invoiceStatusPill(invoice.status)}>{invoice.status}</span>
       </p>
-      <p>
-        Total: {formatAmount(invoice.totalAmount)} — Paid: {formatAmount(invoice.amountPaid)} — Balance:{" "}
-        {formatAmount(invoice.balance)}
-      </p>
+
+      <div className="stat-row">
+        <div className="stat">
+          <span className="stat-label">Total</span>
+          <span className="stat-value">{formatAmount(invoice.totalAmount)}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Paid</span>
+          <span className="stat-value">{formatAmount(invoice.amountPaid)}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Balance</span>
+          <span className="stat-value">{formatAmount(invoice.balance)}</span>
+        </div>
+      </div>
 
       <h3>Line items</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(invoice.lineItems ?? []).map((item) => (
-            <tr key={item.id}>
-              <td>{item.description}</td>
-              <td>{formatAmount(item.amount)}</td>
-            </tr>
-          ))}
-          {(invoice.lineItems ?? []).length === 0 && (
+      <div className="table-wrap">
+        <table>
+          <thead>
             <tr>
-              <td colSpan={2}>No line items on this invoice.</td>
+              <th>Description</th>
+              <th className="num">Amount</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(invoice.lineItems ?? []).map((item) => (
+              <tr key={item.id}>
+                <td>{item.description}</td>
+                <td className="num">{formatAmount(item.amount)}</td>
+              </tr>
+            ))}
+            {(invoice.lineItems ?? []).length === 0 && (
+              <tr>
+                <td colSpan={2} className="muted">No line items on this invoice.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <h3>Payment history</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Amount</th>
-            <th>Method</th>
-            <th>Status</th>
-            <th>Reference</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(invoice.payments ?? []).map((payment) => (
-            <tr key={payment.id}>
-              <td>{formatDateTime(payment.paidAt)}</td>
-              <td>{formatAmount(payment.amount)}</td>
-              <td>{payment.method === "momo" ? `momo (${payment.momoProvider ?? "—"})` : payment.method}</td>
-              <td>{payment.status}</td>
-              <td>{payment.providerReference ?? payment.providerTransactionId ?? "—"}</td>
-            </tr>
-          ))}
-          {(invoice.payments ?? []).length === 0 && (
+      <div className="table-wrap">
+        <table>
+          <thead>
             <tr>
-              <td colSpan={5}>No payments recorded yet.</td>
+              <th>Date</th>
+              <th className="num">Amount</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th>Reference</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(invoice.payments ?? []).map((payment) => (
+              <tr key={payment.id}>
+                <td className="nowrap">{formatDateTime(payment.paidAt)}</td>
+                <td className="num">{formatAmount(payment.amount)}</td>
+                <td>{payment.method === "momo" ? `momo (${payment.momoProvider ?? "—"})` : payment.method}</td>
+                <td>
+                  <span className={paymentStatusPill(payment.status)}>{payment.status}</span>
+                </td>
+                <td>{payment.providerReference ?? payment.providerTransactionId ?? "—"}</td>
+              </tr>
+            ))}
+            {(invoice.payments ?? []).length === 0 && (
+              <tr>
+                <td colSpan={5} className="muted">No payments recorded yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {isStaff && (
-        <fieldset>
+        <fieldset className="form">
           <legend>Record cash / bank transfer payment</legend>
 
-          <label htmlFor="cash-amount">Amount</label>
-          <input
-            id="cash-amount"
-            type="number"
-            min={0.01}
-            step="0.01"
-            value={cashAmount}
-            onChange={(e) => setCashAmount(e.target.value)}
-          />
+          <div className="field">
+            <label htmlFor="cash-amount">Amount</label>
+            <input
+              id="cash-amount"
+              type="number"
+              min={0.01}
+              step="0.01"
+              value={cashAmount}
+              onChange={(e) => setCashAmount(e.target.value)}
+            />
+          </div>
 
-          <label htmlFor="cash-method">Method</label>
-          <select id="cash-method" value={cashMethod} onChange={(e) => setCashMethod(e.target.value as "cash" | "bank_transfer")}>
-            <option value="cash">Cash</option>
-            <option value="bank_transfer">Bank transfer</option>
-          </select>
+          <div className="field">
+            <label htmlFor="cash-method">Method</label>
+            <select id="cash-method" value={cashMethod} onChange={(e) => setCashMethod(e.target.value as "cash" | "bank_transfer")}>
+              <option value="cash">Cash</option>
+              <option value="bank_transfer">Bank transfer</option>
+            </select>
+          </div>
 
-          <label htmlFor="cash-reference">Reference (optional)</label>
-          <input id="cash-reference" type="text" value={cashReference} onChange={(e) => setCashReference(e.target.value)} />
+          <div className="field">
+            <label htmlFor="cash-reference">Reference (optional)</label>
+            <input id="cash-reference" type="text" value={cashReference} onChange={(e) => setCashReference(e.target.value)} />
+          </div>
 
           <button
             type="button"
+            className="btn btn-primary"
             onClick={() => void handleRecordCashPayment()}
             disabled={isRecordingCash || invoice.balance <= 0}
           >
             {isRecordingCash ? "Recording..." : "Record payment"}
           </button>
 
-          {invoice.balance <= 0 && <p>This invoice is fully paid.</p>}
-          {cashError && <p role="alert">{cashError}</p>}
+          {invoice.balance <= 0 && <p className="muted" style={{ marginTop: 12 }}>This invoice is fully paid.</p>}
+          {cashError && <p role="alert" className="alert alert-error" style={{ marginTop: 12 }}>{cashError}</p>}
 
           {lastCashPayment && lastCashPayment.status === "success" && (
             <>
-              <p role="status">
+              <p role="status" className="alert alert-success" style={{ marginTop: 12 }}>
                 Payment recorded: {formatAmount(lastCashPayment.amount)} via {lastCashPayment.method} on{" "}
                 {formatDateTime(lastCashPayment.paidAt)}
                 {lastCashPayment.providerReference ? ` (ref: ${lastCashPayment.providerReference})` : ""}.
@@ -317,50 +370,57 @@ export function InvoiceDetail({ id }: { id: string }) {
       )}
 
       {isPayer && isPayable && (
-        <fieldset>
+        <fieldset className="form">
           <legend>Pay with Mobile Money</legend>
 
-          <label htmlFor="momo-phone">Phone number</label>
-          <input id="momo-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0244000000" />
+          <div className="field">
+            <label htmlFor="momo-phone">Phone number</label>
+            <input id="momo-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0244000000" />
+          </div>
 
-          <label htmlFor="momo-provider">Provider</label>
-          <select id="momo-provider" value={provider} onChange={(e) => setProvider(e.target.value as MomoProvider)}>
-            {MOMO_PROVIDERS.map((p) => (
-              <option key={p} value={p}>
-                {p === "mtn" ? "MTN" : p === "vodafone" ? "Vodafone" : "AirtelTigo"}
-              </option>
-            ))}
-          </select>
+          <div className="field">
+            <label htmlFor="momo-provider">Provider</label>
+            <select id="momo-provider" value={provider} onChange={(e) => setProvider(e.target.value as MomoProvider)}>
+              {MOMO_PROVIDERS.map((p) => (
+                <option key={p} value={p}>
+                  {p === "mtn" ? "MTN" : p === "vodafone" ? "Vodafone" : "AirtelTigo"}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <label htmlFor="momo-amount">Amount</label>
-          <input
-            id="momo-amount"
-            type="number"
-            min={0.01}
-            step="0.01"
-            max={invoice.balance}
-            value={momoAmount}
-            onChange={(e) => setMomoAmount(e.target.value)}
-          />
+          <div className="field">
+            <label htmlFor="momo-amount">Amount</label>
+            <input
+              id="momo-amount"
+              type="number"
+              min={0.01}
+              step="0.01"
+              max={invoice.balance}
+              value={momoAmount}
+              onChange={(e) => setMomoAmount(e.target.value)}
+            />
+          </div>
 
           <button
             type="button"
+            className="btn btn-primary"
             onClick={() => void handleInitiateMomo()}
             disabled={isInitiating || Boolean(activePayment && activePayment.status === "pending")}
           >
             {isInitiating ? "Initiating..." : "Pay now"}
           </button>
 
-          {momoError && <p role="alert">{momoError}</p>}
+          {momoError && <p role="alert" className="alert alert-error" style={{ marginTop: 12 }}>{momoError}</p>}
 
           {activePayment && activePayment.status === "pending" && (
-            <p role="status">
+            <p role="status" className="alert alert-warning" style={{ marginTop: 12 }}>
               Payment pending — approve the prompt on your phone. Checking status every few seconds...
             </p>
           )}
 
           {activePayment && activePayment.status === "success" && (
-            <div role="status">
+            <div role="status" className="alert alert-success" style={{ marginTop: 12 }}>
               <p>Payment successful.</p>
               <p>
                 Amount: {formatAmount(activePayment.amount)} — Provider: {activePayment.momoProvider ?? "—"} — Paid at:{" "}
@@ -372,7 +432,7 @@ export function InvoiceDetail({ id }: { id: string }) {
           )}
 
           {activePayment && activePayment.status === "failed" && (
-            <p role="alert">Payment failed. You can try again above.</p>
+            <p role="alert" className="alert alert-error" style={{ marginTop: 12 }}>Payment failed. You can try again above.</p>
           )}
         </fieldset>
       )}

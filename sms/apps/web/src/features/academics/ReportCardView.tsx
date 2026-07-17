@@ -39,68 +39,84 @@ export function ReportCardView({ id }: { id: string }) {
     };
   }, [id]);
 
-  if (isLoading) return <p>Loading report card...</p>;
-  if (error) return <p role="alert">{error}</p>;
-  if (!reportCard) return <p>Report card not found.</p>;
+  if (isLoading) return <p className="loading">Loading report card...</p>;
+  if (error) return <p role="alert" className="alert alert-error">{error}</p>;
+  if (!reportCard) return <p className="muted">Report card not found.</p>;
 
   return (
     <div>
       <h2>
         {reportCard.learner ? `${reportCard.learner.lastName}, ${reportCard.learner.firstName}` : reportCard.learnerId}
       </h2>
-      <p>
+      <p className="meta-line">
         Class: {reportCard.class?.name ?? reportCard.classId} — Term: {reportCard.term?.name ?? reportCard.termId}
       </p>
-      <p>Status: {reportCard.status}</p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Subject</th>
-            <th>CA</th>
-            <th>Exam</th>
-            <th>Total</th>
-            <th>Grade</th>
-            <th>Remark</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(reportCard.items ?? []).map((item) => (
-            <tr key={item.id}>
-              <td>{item.subject?.name ?? item.subjectId}</td>
-              <td>{item.caTotal}</td>
-              <td>{item.examTotal}</td>
-              <td>{item.totalScore}</td>
-              <td>{item.grade}</td>
-              <td>{item.remark ?? "—"}</td>
-            </tr>
-          ))}
-          {(reportCard.items ?? []).length === 0 && (
-            <tr>
-              <td colSpan={6}>No subject scores recorded for this term.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-
-      <p>
-        <strong>Overall average:</strong> {reportCard.overallAverage ?? "—"} &nbsp;
-        <strong>Overall grade:</strong> {reportCard.overallGrade ?? "—"} &nbsp;
-        <strong>Position in class:</strong> {reportCard.positionInClass ?? "—"}
+      <p className="meta-line">
+        Status:{" "}
+        <span className={`pill ${reportCard.status === "published" ? "pill-success" : "pill-warning"}`}>
+          {reportCard.status}
+        </span>
       </p>
 
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th className="num">CA</th>
+              <th className="num">Exam</th>
+              <th className="num">Total</th>
+              <th>Grade</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(reportCard.items ?? []).map((item) => (
+              <tr key={item.id}>
+                <td>{item.subject?.name ?? item.subjectId}</td>
+                <td className="num">{item.caTotal}</td>
+                <td className="num">{item.examTotal}</td>
+                <td className="num">{item.totalScore}</td>
+                <td>{item.grade}</td>
+                <td>{item.remark ?? "—"}</td>
+              </tr>
+            ))}
+            {(reportCard.items ?? []).length === 0 && (
+              <tr>
+                <td colSpan={6} className="muted">No subject scores recorded for this term.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="stat-row">
+        <div className="stat">
+          <span className="stat-label">Overall average</span>
+          <span className="stat-value">{reportCard.overallAverage ?? "—"}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Overall grade</span>
+          <span className="stat-value">{reportCard.overallGrade ?? "—"}</span>
+        </div>
+        <div className="stat">
+          <span className="stat-label">Position in class</span>
+          <span className="stat-value">{reportCard.positionInClass ?? "—"}</span>
+        </div>
+      </div>
+
       {reportCard.teacherRemark && (
-        <p>
+        <p className="meta-line">
           <strong>Teacher's remark:</strong> {reportCard.teacherRemark}
         </p>
       )}
       {reportCard.headRemark && (
-        <p>
+        <p className="meta-line">
           <strong>Head's remark:</strong> {reportCard.headRemark}
         </p>
       )}
       {reportCard.conductRemark && (
-        <p>
+        <p className="meta-line">
           <strong>Conduct:</strong> {reportCard.conductRemark}
         </p>
       )}

@@ -38,28 +38,30 @@ export function MessageGuardianAction({ learnerId }: { learnerId: string }) {
   if (!isOpen) {
     return (
       <>
-        <button type="button" onClick={() => setIsOpen(true)}>
+        <button type="button" className="btn btn-sm" onClick={() => setIsOpen(true)}>
           Message guardian
         </button>
-        {feedback && <span role="status"> {feedback}</span>}
+        {feedback && <span role="status" className="muted"> {feedback}</span>}
       </>
     );
   }
 
   return (
-    <div>
+    <div className="inline-action">
       <select value={channel} onChange={(e) => setChannel(e.target.value as MessageChannel)}>
         <option value="sms">SMS</option>
         <option value="in_app">In-app</option>
       </select>
       <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} placeholder="Message body" />
-      <button type="button" onClick={() => void handleSend()} disabled={isSending || !body.trim()}>
-        {isSending ? "Sending..." : "Send"}
-      </button>
-      <button type="button" onClick={() => setIsOpen(false)}>
-        Cancel
-      </button>
-      {feedback && <p role="status">{feedback}</p>}
+      <div className="inline-action-buttons">
+        <button type="button" className="btn btn-primary btn-sm" onClick={() => void handleSend()} disabled={isSending || !body.trim()}>
+          {isSending ? "Sending..." : "Send"}
+        </button>
+        <button type="button" className="btn btn-sm" onClick={() => setIsOpen(false)}>
+          Cancel
+        </button>
+      </div>
+      {feedback && <p role="status" className="muted" style={{ margin: 0 }}>{feedback}</p>}
     </div>
   );
 }

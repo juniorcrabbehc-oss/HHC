@@ -4,8 +4,8 @@ import { MessageTemplatesAdmin } from "../../../../features/communications/Messa
 
 export default function AdminMessageTemplatesPage() {
   return (
-    <main>
-      <h1>Message Templates</h1>
+    <main className="page">
+      <h1 className="page-title">Message Templates</h1>
       <MessageTemplatesAdmin />
     </main>
   );

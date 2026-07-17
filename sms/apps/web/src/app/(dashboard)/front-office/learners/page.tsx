@@ -40,51 +40,59 @@ export default function LearnersListPage() {
   }, []);
 
   return (
-    <main>
-      <h1>Learners</h1>
+    <main className="page">
+      <h1 className="page-title">Learners</h1>
       <p>
-        <Link href="/front-office/learners/new">Register a new learner</Link>
+        <Link href="/front-office/learners/new" className="btn btn-primary">
+          Register a new learner
+        </Link>
       </p>
 
-      {isLoading && <p>Loading learners...</p>}
-      {error && <p role="alert">{error}</p>}
+      {isLoading && <p className="loading">Loading learners...</p>}
+      {error && <p role="alert" className="alert alert-error">{error}</p>}
 
       {!isLoading && !error && (
-        <table>
-          <thead>
-            <tr>
-              <th>Admission #</th>
-              <th>Name</th>
-              <th>Class</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {learners.map((learner) => {
-              const currentClass = learner.classEnrollments?.[0]?.class;
-              return (
-                <tr key={learner.id}>
-                  <td>{learner.admissionNumber}</td>
-                  <td>
-                    {learner.lastName}, {learner.firstName}
-                    {learner.otherNames ? ` ${learner.otherNames}` : ""}
-                  </td>
-                  <td>{currentClass?.name ?? "—"}</td>
-                  <td>{learner.status}</td>
-                  <td>
-                    <MessageGuardianAction learnerId={learner.id} />
-                  </td>
-                </tr>
-              );
-            })}
-            {learners.length === 0 && (
+        <div className="table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={5}>No learners found.</td>
+                <th>Admission #</th>
+                <th>Name</th>
+                <th>Class</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {learners.map((learner) => {
+                const currentClass = learner.classEnrollments?.[0]?.class;
+                return (
+                  <tr key={learner.id}>
+                    <td>{learner.admissionNumber}</td>
+                    <td>
+                      {learner.lastName}, {learner.firstName}
+                      {learner.otherNames ? ` ${learner.otherNames}` : ""}
+                    </td>
+                    <td>{currentClass?.name ?? "—"}</td>
+                    <td>
+                      <span className={`pill ${learner.status === "active" ? "pill-success" : ""}`.trim()}>
+                        {learner.status}
+                      </span>
+                    </td>
+                    <td>
+                      <MessageGuardianAction learnerId={learner.id} />
+                    </td>
+                  </tr>
+                );
+              })}
+              {learners.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="muted">No learners found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );

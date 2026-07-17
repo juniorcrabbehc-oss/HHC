@@ -8,9 +8,9 @@ export default function ReportCardDetailPage() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   return (
-    <main>
-      <h1>Report Card</h1>
-      {id ? <ReportCardView id={id} /> : <p role="alert">Missing report card id.</p>}
+    <main className="page">
+      <h1 className="page-title">Report Card</h1>
+      {id ? <ReportCardView id={id} /> : <p role="alert" className="alert alert-error">Missing report card id.</p>}
     </main>
   );
 }

@@ -107,13 +107,13 @@ export default function NewLearnerPage() {
   }
 
   return (
-    <main>
-      <h1>Register a new learner</h1>
-      <form onSubmit={handleSubmit}>
+    <main className="page">
+      <h1 className="page-title">Register a new learner</h1>
+      <form onSubmit={handleSubmit} className="form">
         <fieldset>
           <legend>Learner details</legend>
 
-          <div>
+          <div className="field">
             <label htmlFor="admissionNumber">Admission number</label>
             <input
               id="admissionNumber"
@@ -123,27 +123,27 @@ export default function NewLearnerPage() {
             />
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="firstName">First name</label>
             <input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="lastName">Last name</label>
             <input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="otherNames">Other names</label>
             <input id="otherNames" value={otherNames} onChange={(e) => setOtherNames(e.target.value)} />
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="dob">Date of birth</label>
             <input id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} required />
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="gender">Gender</label>
             <select id="gender" value={gender} onChange={(e) => setGender(e.target.value as "male" | "female")}>
               <option value="male">Male</option>
@@ -151,7 +151,7 @@ export default function NewLearnerPage() {
             </select>
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="admissionDate">Admission date</label>
             <input
               id="admissionDate"
@@ -162,17 +162,17 @@ export default function NewLearnerPage() {
             />
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="medicalNotes">Medical notes</label>
             <textarea id="medicalNotes" value={medicalNotes} onChange={(e) => setMedicalNotes(e.target.value)} />
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="allergies">Allergies</label>
             <textarea id="allergies" value={allergies} onChange={(e) => setAllergies(e.target.value)} />
           </div>
 
-          <div>
+          <div className="field">
             <label htmlFor="classId">Class</label>
             <select id="classId" value={classId} onChange={(e) => setClassId(e.target.value)}>
               <option value="">— Not enrolled yet —</option>
@@ -188,8 +188,8 @@ export default function NewLearnerPage() {
         <fieldset>
           <legend>Guardians</legend>
           {guardians.map((row, index) => (
-            <div key={index}>
-              <div>
+            <div key={index} className="form-row-group">
+              <div className="field">
                 <label htmlFor={`guardianName-${index}`}>Full name</label>
                 <input
                   id={`guardianName-${index}`}
@@ -197,7 +197,7 @@ export default function NewLearnerPage() {
                   onChange={(e) => updateGuardian(index, { fullName: e.target.value })}
                 />
               </div>
-              <div>
+              <div className="field">
                 <label htmlFor={`guardianPhone-${index}`}>Phone</label>
                 <input
                   id={`guardianPhone-${index}`}
@@ -205,7 +205,7 @@ export default function NewLearnerPage() {
                   onChange={(e) => updateGuardian(index, { phonePrimary: e.target.value })}
                 />
               </div>
-              <div>
+              <div className="field">
                 <label htmlFor={`guardianRelationship-${index}`}>Relationship</label>
                 <select
                   id={`guardianRelationship-${index}`}
@@ -219,7 +219,7 @@ export default function NewLearnerPage() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="field field-checkbox">
                 <label htmlFor={`guardianPrimary-${index}`}>
                   <input
                     id={`guardianPrimary-${index}`}
@@ -231,22 +231,22 @@ export default function NewLearnerPage() {
                 </label>
               </div>
               {guardians.length > 1 && (
-                <button type="button" onClick={() => removeGuardianRow(index)}>
+                <button type="button" className="btn btn-danger btn-sm" onClick={() => removeGuardianRow(index)}>
                   Remove guardian
                 </button>
               )}
             </div>
           ))}
-          <button type="button" onClick={addGuardianRow}>
+          <button type="button" className="btn btn-sm" onClick={addGuardianRow}>
             Add another guardian
           </button>
         </fieldset>
 
-        <button type="submit" disabled={isSubmitting}>
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
           {isSubmitting ? "Registering..." : "Register learner"}
         </button>
-        {error && <p role="alert">{error}</p>}
-        {success && <p>Learner registered successfully.</p>}
+        {error && <p role="alert" className="alert alert-error">{error}</p>}
+        {success && <p className="alert alert-success">Learner registered successfully.</p>}
       </form>
     </main>
   );

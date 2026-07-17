@@ -171,75 +171,95 @@ export function AttendanceRegister() {
 
   return (
     <div>
-      <div>
-        <label htmlFor="class-select">Class</label>
-        <select id="class-select" value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
-          {classes.length === 0 && <option value="">No classes assigned</option>}
-          {classes.map((cls) => (
-            <option key={cls.id} value={cls.id}>
-              {cls.name}
-            </option>
-          ))}
-        </select>
+      <div className="toolbar">
+        <div className="field">
+          <label htmlFor="class-select">Class</label>
+          <select id="class-select" value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
+            {classes.length === 0 && <option value="">No classes assigned</option>}
+            {classes.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <label htmlFor="date-select">Date</label>
-        <input id="date-select" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <div className="field">
+          <label htmlFor="date-select">Date</label>
+          <input id="date-select" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
 
-        <button type="button" onClick={() => void syncNow().then(() => refreshPending())} disabled={isSyncing}>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => void syncNow().then(() => refreshPending())}
+          disabled={isSyncing}
+        >
           {isSyncing ? "Syncing..." : `Sync now${pendingCount > 0 ? ` (${pendingCount} pending)` : ""}`}
         </button>
       </div>
 
-      {isOffline && <p role="status">Offline — showing the last cached roster for this class/date.</p>}
-      {pendingCount > 0 && <p role="status">{pendingCount} attendance mark(s) queued, waiting to sync.</p>}
-      {isLoading && <p>Loading roster...</p>}
-      {error && <p role="alert">{error}</p>}
-      {!selectedClass && classes.length > 0 && <p>Select a class to take attendance.</p>}
-      {!termId && selectedClassId && <p>Resolving the current term for this class...</p>}
+      {isOffline && (
+        <p role="status" className="alert alert-info">
+          Offline — showing the last cached roster for this class/date.
+        </p>
+      )}
+      {pendingCount > 0 && (
+        <p role="status" className="alert alert-warning">
+          {pendingCount} attendance mark(s) queued, waiting to sync.
+        </p>
+      )}
+      {isLoading && <p className="loading">Loading roster...</p>}
+      {error && <p role="alert" className="alert alert-error">{error}</p>}
+      {!selectedClass && classes.length > 0 && <p className="muted">Select a class to take attendance.</p>}
+      {!termId && selectedClassId && <p className="loading">Resolving the current term for this class...</p>}
 
       {!isLoading && rows.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Admission #</th>
-              <th>Name</th>
-              {STATUS_OPTIONS.map((option) => (
-                <th key={option.value}>{option.label}</th>
-              ))}
-              <th>Queued</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const currentStatus = pendingMap[row.learnerId]?.status ?? row.record?.status ?? null;
-              const isQueued = Boolean(pendingMap[row.learnerId]);
-              return (
-                <tr key={row.learnerId}>
-                  <td>{row.admissionNumber}</td>
-                  <td>
-                    {row.lastName}, {row.firstName}
-                  </td>
-                  {STATUS_OPTIONS.map((option) => (
-                    <td key={option.value}>
-                      <button
-                        type="button"
-                        aria-pressed={currentStatus === option.value}
-                        disabled={!termId}
-                        onClick={() => void handleMark(row.learnerId, option.value)}
-                      >
-                        {currentStatus === option.value ? `● ${option.label}` : option.label}
-                      </button>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Admission #</th>
+                <th>Name</th>
+                {STATUS_OPTIONS.map((option) => (
+                  <th key={option.value}>{option.label}</th>
+                ))}
+                <th>Queued</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => {
+                const currentStatus = pendingMap[row.learnerId]?.status ?? row.record?.status ?? null;
+                const isQueued = Boolean(pendingMap[row.learnerId]);
+                return (
+                  <tr key={row.learnerId}>
+                    <td>{row.admissionNumber}</td>
+                    <td className="nowrap">
+                      {row.lastName}, {row.firstName}
                     </td>
-                  ))}
-                  <td>{isQueued ? "queued" : ""}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    {STATUS_OPTIONS.map((option) => (
+                      <td key={option.value}>
+                        <button
+                          type="button"
+                          className="btn btn-toggle"
+                          aria-pressed={currentStatus === option.value}
+                          disabled={!termId}
+                          onClick={() => void handleMark(row.learnerId, option.value)}
+                        >
+                          {currentStatus === option.value ? `● ${option.label}` : option.label}
+                        </button>
+                      </td>
+                    ))}
+                    <td>{isQueued ? <span className="pill pill-warning">queued</span> : ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {!isLoading && rows.length === 0 && !error && <p>No learners actively enrolled in this class.</p>}
+      {!isLoading && rows.length === 0 && !error && <p className="muted">No learners actively enrolled in this class.</p>}
     </div>
   );
 }

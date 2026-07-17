@@ -1,8 +1,13 @@
 export default function HomePage() {
   return (
-    <main>
-      <h1>SMS — Sunrise International School</h1>
-      <p>School Management System. Phase 0 scaffold.</p>
+    <main className="auth-page">
+      <div className="auth-card">
+        <p className="auth-wordmark">Sunrise International School</p>
+        <p className="auth-subtitle">School Management System</p>
+        <p className="muted" style={{ textAlign: "center", marginBottom: 0 }}>
+          Phase 0 scaffold.
+        </p>
+      </div>
     </main>
   );
 }

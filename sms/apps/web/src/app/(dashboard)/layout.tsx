@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "../../lib/api-client";
+import { AppShell } from "../../components/AppShell";
 import { registerServiceWorker } from "../../lib/offline/register-sw";
 import { startSyncEngine } from "../../lib/offline/sync-engine";
 
@@ -39,5 +40,5 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return null;
   }
 
-  return <div>{children}</div>;
+  return <AppShell>{children}</AppShell>;
 }

@@ -4,8 +4,8 @@ import { AttendanceRegister } from "../../../../features/attendance/AttendanceRe
 
 export default function TeacherAttendancePage() {
   return (
-    <main>
-      <h1>Attendance</h1>
+    <main className="page">
+      <h1 className="page-title">Attendance</h1>
       <AttendanceRegister />
     </main>
   );

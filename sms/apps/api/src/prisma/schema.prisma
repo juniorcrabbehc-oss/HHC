@@ -77,6 +77,9 @@ model School {
   messageTemplates   MessageTemplate[]
   messages           Message[]
   auditLogs          AuditLog[]
+  periods            Period[]
+  rooms              Room[]
+  timetableSlots     TimetableSlot[]
 }
 
 model User {
@@ -103,6 +106,7 @@ model User {
   caScoresRecorded           CaScore[]          @relation("CaScoreRecordedBy")
   examScoresRecorded         ExamScore[]        @relation("ExamScoreRecordedBy")
   auditLogs                  AuditLog[]
+  timetableSlots             TimetableSlot[]    @relation("TimetableTeacher")
 
   @@unique([schoolId, email])
   @@unique([schoolId, phone])
@@ -255,6 +259,7 @@ model AcademicYear {
   classEnrollments  ClassEnrollment[]
   assessmentConfigs AssessmentConfig[]
   feeStructures     FeeStructure[]
+  timetableSlots    TimetableSlot[]
 
   @@index([schoolId])
 }
@@ -297,6 +302,7 @@ model Class {
   classSubjects     ClassSubject[]
   attendanceRecords AttendanceRecord[]
   reportCards       ReportCard[]
+  timetableSlots    TimetableSlot[]
 
   @@index([schoolId])
 }
@@ -328,6 +334,7 @@ model Subject {
   school          School           @relation(fields: [schoolId], references: [id])
   classSubjects   ClassSubject[]
   reportCardItems ReportCardItem[]
+  timetableSlots  TimetableSlot[]
 
   @@index([schoolId])
 }
@@ -690,6 +697,74 @@ model MessageDeliveryEvent {
   message Message @relation(fields: [messageId], references: [id])
 
   @@index([messageId])
+}
+
+// ---------------------------------------------------------------------------
+// Timetable & scheduling
+// ---------------------------------------------------------------------------
+
+model Period {
+  id        String  @id @default(uuid())
+  schoolId  String
+  name      String
+  // Local school wall-clock times as "HH:mm" — display-only, never used in
+  // date arithmetic, so no UTC conversion applies.
+  startTime String
+  endTime   String
+  sortOrder Int
+  isBreak   Boolean @default(false)
+
+  school         School          @relation(fields: [schoolId], references: [id])
+  timetableSlots TimetableSlot[]
+
+  @@unique([schoolId, sortOrder])
+  @@index([schoolId])
+}
+
+model Room {
+  id       String  @id @default(uuid())
+  schoolId String
+  name     String
+  capacity Int?
+
+  school         School          @relation(fields: [schoolId], references: [id])
+  timetableSlots TimetableSlot[]
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+}
+
+model TimetableSlot {
+  id             String   @id @default(uuid())
+  schoolId       String
+  academicYearId String
+  classId        String
+  subjectId      String
+  teacherId      String?
+  roomId         String?
+  periodId       String
+  // ISO weekday: 1 = Monday ... 7 = Sunday (school weeks use 1-5).
+  dayOfWeek      Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  school       School       @relation(fields: [schoolId], references: [id])
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id])
+  class        Class        @relation(fields: [classId], references: [id])
+  subject      Subject      @relation(fields: [subjectId], references: [id])
+  teacher      User?        @relation("TimetableTeacher", fields: [teacherId], references: [id])
+  room         Room?        @relation(fields: [roomId], references: [id])
+  period       Period       @relation(fields: [periodId], references: [id])
+
+  // DB-level backstop for the three double-booking rules; the service
+  // pre-checks these to return friendly 409s. Postgres treats NULL
+  // teacherId/roomId as distinct, so unassigned slots never collide.
+  @@unique([classId, dayOfWeek, periodId])
+  @@unique([academicYearId, teacherId, dayOfWeek, periodId])
+  @@unique([academicYearId, roomId, dayOfWeek, periodId])
+  @@index([schoolId])
+  @@index([teacherId])
+  @@index([classId])
 }
 
 // ---------------------------------------------------------------------------

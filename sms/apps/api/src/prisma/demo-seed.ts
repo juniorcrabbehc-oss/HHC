@@ -481,6 +481,73 @@ async function main(): Promise<void> {
     }
   }
 
+  // -- Timetable: periods, rooms, and a week of lessons --------------------
+  console.log("Building the timetable...");
+  const periodSpecs = [
+    { name: "Period 1", startTime: "08:00", endTime: "08:45", sortOrder: 1, isBreak: false },
+    { name: "Period 2", startTime: "08:45", endTime: "09:30", sortOrder: 2, isBreak: false },
+    { name: "Snack Break", startTime: "09:30", endTime: "10:00", sortOrder: 3, isBreak: true },
+    { name: "Period 3", startTime: "10:00", endTime: "10:45", sortOrder: 4, isBreak: false },
+    { name: "Period 4", startTime: "10:45", endTime: "11:30", sortOrder: 5, isBreak: false },
+    { name: "Lunch", startTime: "11:30", endTime: "12:30", sortOrder: 6, isBreak: true },
+    { name: "Period 5", startTime: "12:30", endTime: "13:15", sortOrder: 7, isBreak: false },
+    { name: "Period 6", startTime: "13:15", endTime: "14:00", sortOrder: 8, isBreak: false },
+  ];
+  const periods: Record<number, string> = {};
+  for (const p of periodSpecs) {
+    const existing = await prisma.period.findFirst({ where: { schoolId: school.id, sortOrder: p.sortOrder } });
+    const period = existing ?? (await prisma.period.create({ data: { schoolId: school.id, ...p } }));
+    periods[p.sortOrder] = period.id;
+  }
+
+  const roomSpecs = [
+    { name: "Primary Block Room 1", capacity: 30 },
+    { name: "JHS Block Room 1", capacity: 35 },
+    { name: "Science Room", capacity: 25 },
+  ];
+  const rooms: Record<string, string> = {};
+  for (const r of roomSpecs) {
+    const existing = await prisma.room.findFirst({ where: { schoolId: school.id, name: r.name } });
+    const room = existing ?? (await prisma.room.create({ data: { schoolId: school.id, ...r } }));
+    rooms[r.name] = room.id;
+  }
+
+  // A simple rotation: each teaching period cycles through the four subjects,
+  // offset per day, each class in its home room. One shared subject-teacher
+  // per class means no cross-class teacher clashes in the demo data.
+  const teachingSortOrders = [1, 2, 4, 5, 7, 8];
+  const subjectCodes = ["MATH", "ENG", "SCI", "SOC"];
+  async function ensureWeeklyTimetable(
+    classId: string,
+    homeRoomName: string,
+    teacherId: string,
+  ) {
+    for (let day = 1; day <= 5; day += 1) {
+      for (let i = 0; i < teachingSortOrders.length; i += 1) {
+        const periodId = periods[teachingSortOrders[i]];
+        const code = subjectCodes[(i + day) % subjectCodes.length];
+        const existing = await prisma.timetableSlot.findFirst({
+          where: { classId, dayOfWeek: day, periodId },
+        });
+        if (existing) continue;
+        await prisma.timetableSlot.create({
+          data: {
+            schoolId: school.id,
+            academicYearId: academicYear!.id,
+            classId,
+            subjectId: subjects[code],
+            teacherId,
+            roomId: rooms[homeRoomName],
+            periodId,
+            dayOfWeek: day,
+          },
+        });
+      }
+    }
+  }
+  await ensureWeeklyTimetable(primary1a.id, "Primary Block Room 1", teachers["Kwame Mensah"]);
+  await ensureWeeklyTimetable(jhs1a.id, "JHS Block Room 1", teachers["Kofi Adjei"]);
+
   console.log("\nDemo data ready.\n");
   console.log("Login as:");
   console.log("  Admin:   admin@sunrise.test / Admin123!");

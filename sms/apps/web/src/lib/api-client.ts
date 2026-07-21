@@ -801,3 +801,115 @@ export function updateMessageTemplate(
 ): Promise<MessageTemplateDto> {
   return apiFetch<MessageTemplateDto>(`/message-templates/${id}`, { method: "PATCH", auth: true, body: input });
 }
+
+// ---------------------------------------------------------------------------
+// Typed endpoint helpers (Phase 6 — timetable & scheduling)
+// ---------------------------------------------------------------------------
+
+export interface PeriodDto {
+  id: string;
+  schoolId: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  sortOrder: number;
+  isBreak: boolean;
+}
+
+export interface RoomDto {
+  id: string;
+  schoolId: string;
+  name: string;
+  capacity: number | null;
+}
+
+export interface TimetableSlotDto {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  classId: string;
+  subjectId: string;
+  teacherId: string | null;
+  roomId: string | null;
+  periodId: string;
+  /** ISO weekday: 1 = Monday ... 5 = Friday. */
+  dayOfWeek: number;
+  subject?: SubjectDto;
+  period?: PeriodDto;
+  room?: RoomDto | null;
+  teacher?: { id: string; email: string | null; phone: string | null } | null;
+  class?: { id: string; name: string };
+}
+
+export interface ClassTimetableDto {
+  class: { id: string; name: string; academicYearId: string };
+  slots: TimetableSlotDto[];
+}
+
+export interface MyClassTimetableDto {
+  class: { id: string; name: string };
+  learnerNames: string[];
+  slots: TimetableSlotDto[];
+}
+
+export interface TeacherTimetableDto {
+  teacherId: string;
+  slots: TimetableSlotDto[];
+}
+
+export function getPeriods(): Promise<PeriodDto[]> {
+  return apiFetch<PeriodDto[]>("/periods", { auth: true });
+}
+
+export function createPeriod(input: {
+  name: string;
+  startTime: string;
+  endTime: string;
+  sortOrder: number;
+  isBreak?: boolean;
+}): Promise<PeriodDto> {
+  return apiFetch<PeriodDto>("/periods", { method: "POST", auth: true, body: input });
+}
+
+export function deletePeriod(id: string): Promise<PeriodDto> {
+  return apiFetch<PeriodDto>(`/periods/${id}`, { method: "DELETE", auth: true });
+}
+
+export function getRooms(): Promise<RoomDto[]> {
+  return apiFetch<RoomDto[]>("/rooms", { auth: true });
+}
+
+export function createRoom(input: { name: string; capacity?: number }): Promise<RoomDto> {
+  return apiFetch<RoomDto>("/rooms", { method: "POST", auth: true, body: input });
+}
+
+export function deleteRoom(id: string): Promise<RoomDto> {
+  return apiFetch<RoomDto>(`/rooms/${id}`, { method: "DELETE", auth: true });
+}
+
+export function getClassTimetable(classId: string): Promise<ClassTimetableDto> {
+  return apiFetch<ClassTimetableDto>(`/timetable/class/${classId}`, { auth: true });
+}
+
+export function getMyTeacherTimetable(): Promise<TeacherTimetableDto> {
+  return apiFetch<TeacherTimetableDto>("/timetable/teacher/me", { auth: true });
+}
+
+export function getMyClassTimetables(): Promise<MyClassTimetableDto[]> {
+  return apiFetch<MyClassTimetableDto[]>("/timetable/mine", { auth: true });
+}
+
+export function createTimetableSlot(input: {
+  classId: string;
+  subjectId: string;
+  periodId: string;
+  dayOfWeek: number;
+  teacherId?: string | null;
+  roomId?: string | null;
+}): Promise<TimetableSlotDto> {
+  return apiFetch<TimetableSlotDto>("/timetable/slots", { method: "POST", auth: true, body: input });
+}
+
+export function deleteTimetableSlot(id: string): Promise<TimetableSlotDto> {
+  return apiFetch<TimetableSlotDto>(`/timetable/slots/${id}`, { method: "DELETE", auth: true });
+}

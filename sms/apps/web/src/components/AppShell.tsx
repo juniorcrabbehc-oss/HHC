@@ -21,6 +21,9 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/teacher/attendance", label: "Attendance", roles: ["admin", "teacher"] },
   { href: "/teacher/scores", label: "Scores", roles: ["admin", "teacher"] },
+  { href: "/teacher/timetable", label: "My Timetable", roles: ["teacher"] },
+  { href: "/admin/timetable", label: "Timetable", roles: ["admin"] },
+  { href: "/parent/timetable", label: "Timetable", roles: ["parent", "learner"] },
   { href: "/front-office/learners", label: "Learners", roles: ["admin", "teacher", "front_office"] },
   { href: "/bursar/invoices", label: "Invoices", roles: ["admin", "bursar"] },
   { href: "/parent/invoices", label: "Invoices", roles: ["parent", "learner"] },

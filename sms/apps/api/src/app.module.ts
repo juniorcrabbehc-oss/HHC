@@ -17,6 +17,7 @@ import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { AcademicsModule } from "./modules/academics/academics.module";
 import { FeesModule } from "./modules/fees/fees.module";
 import { CommunicationsModule } from "./modules/communications/communications.module";
+import { TimetableModule } from "./modules/timetable/timetable.module";
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { CommunicationsModule } from "./modules/communications/communications.mo
     AcademicsModule,
     FeesModule,
     CommunicationsModule,
+    TimetableModule,
   ],
   providers: [
     // Applies the ThrottlerModule limits to every route by default;

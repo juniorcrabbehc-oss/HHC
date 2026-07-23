@@ -5,6 +5,7 @@ import {
   ApiError,
   createCashPayment,
   getCurrentUser,
+  getFeatures,
   getInvoice,
   getPaymentStatus,
   getReceipt,
@@ -114,6 +115,20 @@ export function InvoiceDetail({ id }: { id: string }) {
   const [isInitiating, setIsInitiating] = useState(false);
   const [momoError, setMomoError] = useState<string | null>(null);
   const [activePayment, setActivePayment] = useState<PaymentDto | null>(null);
+
+  // MoMo is hidden until the API reports a payment provider is configured
+  // (GET /config/features). Defaults false so the form never flashes in.
+  const [momoEnabled, setMomoEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getFeatures().then((features) => {
+      if (!cancelled) setMomoEnabled(features.momoEnabled);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadInvoice = useCallback(async () => {
     setError(null);
@@ -369,7 +384,14 @@ export function InvoiceDetail({ id }: { id: string }) {
         </fieldset>
       )}
 
-      {isPayer && isPayable && (
+      {isPayer && isPayable && !momoEnabled && (
+        <p className="alert alert-warning">
+          Online Mobile Money payment is coming soon. For now, please pay at the school office — your
+          receipt will appear here once recorded.
+        </p>
+      )}
+
+      {isPayer && isPayable && momoEnabled && (
         <fieldset className="form">
           <legend>Pay with Mobile Money</legend>
 

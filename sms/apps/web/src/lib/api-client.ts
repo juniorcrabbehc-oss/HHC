@@ -287,6 +287,24 @@ export interface AttendanceSyncResultItem {
   errorMessage?: string;
 }
 
+export interface FeatureFlagsDto {
+  momoEnabled: boolean;
+  smsEnabled: boolean;
+}
+
+/**
+ * Provider-derived feature flags (public endpoint, no auth). Defaults to
+ * everything-off on failure so a flaky network hides optional flows
+ * rather than surfacing ones that would error when used.
+ */
+export async function getFeatures(): Promise<FeatureFlagsDto> {
+  try {
+    return await apiFetch<FeatureFlagsDto>("/config/features");
+  } catch {
+    return { momoEnabled: false, smsEnabled: false };
+  }
+}
+
 export function getLevels(): Promise<LevelDto[]> {
   return apiFetch<LevelDto[]>("/levels", { auth: true });
 }

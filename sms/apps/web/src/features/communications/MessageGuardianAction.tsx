@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ApiError, sendMessage } from "../../lib/api-client";
+import { useEffect, useState } from "react";
+import { ApiError, getFeatures, sendMessage } from "../../lib/api-client";
 import type { MessageChannel } from "../../lib/api-client";
 
 /**
@@ -14,10 +14,23 @@ import type { MessageChannel } from "../../lib/api-client";
  */
 export function MessageGuardianAction({ learnerId }: { learnerId: string }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [channel, setChannel] = useState<MessageChannel>("sms");
+  // Default to in_app: it always works. SMS becomes selectable only once
+  // the API reports a configured SMS provider (GET /config/features).
+  const [channel, setChannel] = useState<MessageChannel>("in_app");
+  const [smsEnabled, setSmsEnabled] = useState(false);
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getFeatures().then((features) => {
+      if (!cancelled) setSmsEnabled(features.smsEnabled);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSend() {
     if (!body.trim()) return;
@@ -49,8 +62,8 @@ export function MessageGuardianAction({ learnerId }: { learnerId: string }) {
   return (
     <div className="inline-action">
       <select value={channel} onChange={(e) => setChannel(e.target.value as MessageChannel)}>
-        <option value="sms">SMS</option>
         <option value="in_app">In-app</option>
+        {smsEnabled && <option value="sms">SMS</option>}
       </select>
       <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} placeholder="Message body" />
       <div className="inline-action-buttons">

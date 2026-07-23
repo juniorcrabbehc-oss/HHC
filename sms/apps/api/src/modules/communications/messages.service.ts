@@ -51,6 +51,13 @@ export class MessagesService {
    * `MessageTemplate`/eventTrigger — the body is whatever staff typed.
    */
   async create(dto: SendMessageDto, actor: AuthenticatedUser) {
+    // Feature-gated on provider config — same pattern as MoMo initiation.
+    // The web UI hides the SMS channel via GET /config/features when the
+    // Arkesel key is absent; this guard covers direct API callers.
+    if (dto.channel === "sms" && !process.env.ARKESEL_API_KEY) {
+      throw new BadRequestException("SMS sending is not enabled yet. Use the in-app channel instead.");
+    }
+
     const schoolId = this.tenant.schoolId;
     const guardian = await this.resolveRecipientGuardian(dto, schoolId);
 

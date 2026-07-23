@@ -42,6 +42,16 @@ export class PaymentsService {
    * the reconciliation cron) fires.
    */
   async initiateMomo(dto: InitiateMomoPaymentDto, actor: AuthenticatedUser) {
+    // Feature-gated on provider config: without a Paystack key the deep
+    // client call would fail anyway, but with a confusing 500. The web UI
+    // hides the MoMo form via GET /config/features when this key is
+    // absent; this guard covers direct API callers with the same story.
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+      throw new BadRequestException(
+        "Mobile Money payments are not enabled yet. Please pay at the school office.",
+      );
+    }
+
     const schoolId = this.tenant.schoolId;
 
     const invoice = await this.prisma.invoice.findFirst({
